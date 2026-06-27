@@ -728,7 +728,8 @@
     <h1>师傅 Shīfu</h1>
     <p>ครูสอนภาษาจีนส่วนตัว</p>
   </div>
-  <button type="button" class="lang-badge" id="translateToggle" title="กดเพื่อโชว์/ซ่อนคำแปลไทย">ZH ↔ TH</button>
+  <button type="button" class="lang-badge" id="speakLangToggle" title="เลือกภาษาที่จะพูด">🗣️ ไทย</button>
+  <button type="button" class="settings-btn" id="translateToggle" title="กดเพื่อโชว์/ซ่อนคำแปลไทย">🌐</button>
   <button type="button" class="settings-btn" id="settingsBtn" title="ตั้งค่า">⚙️</button>
 </header>
 
@@ -768,7 +769,8 @@
     <p>กดปุ่ม 🎤 แล้วพูดได้เลยค่ะ<br>
     พูดไทยหรือจีนก็ได้<br>
     ครูจะตอบเป็นภาษาจีน พร้อม Pinyin<br><br>
-    กดปุ่ม <strong>ZH ↔ TH</strong> ด้านบน หรือพูดว่า <strong>"แปล"</strong> เพื่อโชว์คำอธิบายภาษาไทย</p>
+    กดปุ่ม <strong>🌐</strong> ด้านบน หรือพูดว่า <strong>"แปล"</strong> เพื่อโชว์คำอธิบายภาษาไทย<br>
+    กดปุ่ม <strong>🗣️</strong> เพื่อสลับภาษาที่จะพูด (ไทย/จีน)</p>
   </div>
 </div>
 
@@ -780,7 +782,7 @@
     <button id="micBtn" title="กดพูด">🎤</button>
     <button class="side-btn" id="stopBtn" title="หยุดพูด">⏹️</button>
   </div>
-  <div class="hint">กดปุ่ม ZH↔TH หรือพูดว่า "แปล" เพื่อโชว์คำอธิบายภาษาไทย</div>
+  <div class="hint">กดปุ่ม 🌐 หรือพูดว่า "แปล" เพื่อโชว์คำอธิบายภาษาไทย · กดปุ่ม 🗣️ เพื่อสลับภาษาที่จะพูด</div>
 </div>
 
 <script>
@@ -801,6 +803,9 @@ let conversationHistory = [];
 let recognition = null;
 let isListening = false;
 let currentUtterance = null;
+let speakLang = 'th-TH'; // ภาษาที่ผู้พูดจะใช้ — 'th-TH' หรือ 'zh-CN'
+
+const SPEAK_LANG_LABELS = { 'th-TH': '🗣️ ไทย', 'zh-CN': '🗣️ 中文' };
 
 const chat = document.getElementById('chat');
 const micBtn = document.getElementById('micBtn');
@@ -810,12 +815,24 @@ const status = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const welcome = document.getElementById('welcome');
 const translateToggle = document.getElementById('translateToggle');
+const speakLangToggle = document.getElementById('speakLangToggle');
 const settingsBtn = document.getElementById('settingsBtn');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
 const thaiSwitch = document.getElementById('thaiSwitch');
 const pinyinSwitch = document.getElementById('pinyinSwitch');
 const changeKeyBtn = document.getElementById('changeKeyBtn');
+
+function setSpeakLang(lang) {
+  speakLang = lang;
+  speakLangToggle.textContent = SPEAK_LANG_LABELS[lang];
+  if (recognition) recognition.lang = lang;
+}
+
+speakLangToggle.addEventListener('click', () => {
+  setSpeakLang(speakLang === 'th-TH' ? 'zh-CN' : 'th-TH');
+});
+
 
 // Setup STT
 function setupSpeechRecognition() {
@@ -829,7 +846,7 @@ function setupSpeechRecognition() {
   recognition = new SpeechRecognition();
   recognition.continuous = false;
   recognition.interimResults = true;
-  recognition.lang = 'th-TH'; // Thai + will pick up Chinese too
+  recognition.lang = speakLang; // ใช้ภาษาตามที่ผู้ใช้เลือก toggle ไว้
 
   recognition.onstart = () => {
     isListening = true;
@@ -1202,7 +1219,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 4 (Sidebar + Change Key)</div>
+<div id="buildTag">CTalk v1 · Step 5 (Speak lang toggle)</div>
 
 </body>
 </html>
