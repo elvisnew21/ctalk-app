@@ -362,9 +362,17 @@
   }
 
   /* Scrollbar */
-  #chat::-webkit-scrollbar { width: 3px; }
+  #chat {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139,115,85,0.45) transparent;
+  }
+  #chat::-webkit-scrollbar { width: 7px; }
   #chat::-webkit-scrollbar-track { background: transparent; }
-  #chat::-webkit-scrollbar-thumb { background: rgba(139,115,85,0.2); border-radius: 3px; }
+  #chat::-webkit-scrollbar-thumb {
+    background: rgba(139,115,85,0.4);
+    border-radius: 8px;
+  }
+  #chat::-webkit-scrollbar-thumb:hover { background: rgba(139,115,85,0.65); }
 
   /* ===== SETUP SCREEN ===== */
   #setupOverlay {
@@ -1225,7 +1233,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 5b (STT fix + scroll fix)</div>
+<div id="buildTag">CTalk v1 · Step 5c (Scrollbar fix)</div>
 
 </body>
 </html>
