@@ -94,7 +94,42 @@
     border-radius: 20px;
     font-weight: 600;
     letter-spacing: 0.5px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    transition: all 0.2s;
   }
+
+  .lang-badge:active { transform: scale(0.95); }
+
+  .lang-badge.active {
+    background: var(--gold);
+    box-shadow: 0 0 0 2px rgba(212,168,67,0.3);
+  }
+
+  /* Structured reply lines */
+  .cn-line {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .py-line {
+    font-size: 12px;
+    color: var(--gray);
+    margin-top: 3px;
+    font-style: italic;
+  }
+
+  .th-line {
+    font-size: 13px;
+    color: var(--ink);
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(139,115,85,0.25);
+    display: none;
+  }
+
+  .show-thai .th-line { display: block; }
 
   /* Chat area */
   #chat {
@@ -515,7 +550,7 @@
     <h1>师傅 Shīfu</h1>
     <p>ครูสอนภาษาจีนส่วนตัว</p>
   </div>
-  <div class="lang-badge">ZH ↔ TH</div>
+  <button type="button" class="lang-badge" id="translateToggle" title="กดเพื่อโชว์/ซ่อนคำแปลไทย">ZH ↔ TH</button>
 </header>
 
 <div id="chat">
@@ -524,7 +559,7 @@
     <p>กดปุ่ม 🎤 แล้วพูดได้เลยค่ะ<br>
     พูดไทยหรือจีนก็ได้<br>
     ครูจะตอบเป็นภาษาจีน พร้อม Pinyin<br><br>
-    พูดว่า <strong>"แปล"</strong> เมื่อต้องการคำอธิบายภาษาไทย</p>
+    กดปุ่ม <strong>ZH ↔ TH</strong> ด้านบน หรือพูดว่า <strong>"แปล"</strong> เพื่อโชว์คำอธิบายภาษาไทย</p>
   </div>
 </div>
 
@@ -536,24 +571,22 @@
     <button id="micBtn" title="กดพูด">🎤</button>
     <button class="side-btn" id="stopBtn" title="หยุดพูด">⏹️</button>
   </div>
-  <div class="hint">พูดว่า "แปล" เพื่อขอคำอธิบายภาษาไทย</div>
+  <div class="hint">กดปุ่ม ZH↔TH หรือพูดว่า "แปล" เพื่อโชว์คำอธิบายภาษาไทย</div>
 </div>
 
 <script>
 const SYSTEM_PROMPT = `คุณคือ 师傅 (Shīfu) ครูสอนภาษาจีนกลาง (普通话) ที่เชี่ยวชาญและอบอุ่น
 
 กฎการตอบ:
-1. ตอบเป็นภาษาจีนเสมอ พร้อม Pinyin กำกับทุกประโยค
-2. ถ้านักเรียนพูดว่า "แปล" หรือ "อธิบาย" หรือ "translate" ให้อธิบายเป็นภาษาไทยด้วย
-3. ถ้านักเรียนพูดผิด ให้แก้ไขอย่างอ่อนโยนและแสดงประโยคที่ถูกต้อง
-4. ตอบกระชับ ไม่ยาวเกิน 3-4 ประโยค
-5. สอนคำศัพท์หรือ grammar เพิ่มเติมเมื่อเหมาะสม
-6. ใช้ภาษาจีนตัวย่อ (简体字)
+1. ตอบกระชับ ไม่ยาวเกิน 3-4 ประโยคภาษาจีน
+2. ถ้านักเรียนพูดผิด ให้แก้ไขอย่างอ่อนโยนและแสดงประโยคที่ถูกต้องในส่วนภาษาจีน
+3. ใช้ภาษาจีนตัวย่อ (简体字) เท่านั้น
+4. สอนคำศัพท์หรือ grammar เพิ่มเติมในส่วนภาษาไทยเมื่อเหมาะสม
 
-รูปแบบการตอบ:
-Chinese: [ประโยคจีน]
-Pinyin: [pinyin]
-(ถ้าต้องแปล) ไทย: [คำแปล]`;
+รูปแบบการตอบ — ตอบแค่ 3 บรรทัดนี้เท่านั้น ห้ามมีข้อความอื่นนอกเหนือจากนี้ และห้ามแยกเป็นหลายชุดซ้ำ:
+CHINESE: [ข้อความจีนทั้งหมดของคำตอบ ภาษาจีนล้วน ไม่มี pinyin หรือไทยปนอยู่ในบรรทัดนี้]
+PINYIN: [pinyin ของบรรทัด CHINESE ทั้งหมด เรียงตามลำดับคำให้ตรงกัน]
+THAI: [คำแปลภาษาไทยของบรรทัด CHINESE ทั้งหมด พร้อมอธิบายเพิ่มถ้ามีจุดที่แก้ไขให้นักเรียน]`;
 
 let conversationHistory = [];
 let recognition = null;
@@ -567,6 +600,7 @@ const clearBtn = document.getElementById('clearBtn');
 const status = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const welcome = document.getElementById('welcome');
+const translateToggle = document.getElementById('translateToggle');
 
 // Setup STT
 function setupSpeechRecognition() {
@@ -663,6 +697,35 @@ clearBtn.addEventListener('click', () => {
   status.textContent = 'กดปุ่มไมค์เพื่อเริ่ม';
 });
 
+// ===== TRANSLATE TOGGLE (โชว์/ซ่อนส่วนภาษาไทย) =====
+function setShowThai(state) {
+  document.body.classList.toggle('show-thai', state);
+  translateToggle.classList.toggle('active', state);
+}
+
+translateToggle.addEventListener('click', () => {
+  setShowThai(!document.body.classList.contains('show-thai'));
+});
+
+// ===== PARSE STRUCTURED REPLY (CHINESE / PINYIN / THAI) =====
+function parseShifuReply(raw) {
+  const extract = (label, stopLabels) => {
+    const stopAlts = stopLabels.map(l => l + ':');
+    const lookahead = stopAlts.length ? `(?:${stopAlts.join('|')})|$` : '$';
+    const re = new RegExp(label + ':\\s*([\\s\\S]*?)\\s*(?=' + lookahead + ')', 'i');
+    const m = raw.match(re);
+    return m ? m[1].trim() : '';
+  };
+
+  const chinese = extract('CHINESE', ['PINYIN', 'THAI']);
+  const pinyin  = extract('PINYIN',  ['THAI']);
+  const thai    = extract('THAI',    []);
+
+  // Fallback: ถ้า parse ไม่เจอ format ที่คาดไว้ ให้ถือว่าทั้งหมดเป็นข้อความจีน (กันแอปพังถ้า Claude ตอบไม่ตรง format)
+  if (!chinese) return { chinese: raw.trim(), pinyin: '', thai: '' };
+  return { chinese, pinyin, thai };
+}
+
 function addMessage(role, text) {
   if (welcome) welcome.style.display = 'none';
 
@@ -675,7 +738,34 @@ function addMessage(role, text) {
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
-  bubble.textContent = text;
+
+  let chineseForSpeech = text;
+
+  if (role === 'assistant') {
+    const parsed = parseShifuReply(text);
+    chineseForSpeech = parsed.chinese;
+
+    const cnLine = document.createElement('div');
+    cnLine.className = 'cn-line';
+    cnLine.textContent = parsed.chinese;
+    bubble.appendChild(cnLine);
+
+    if (parsed.pinyin) {
+      const pyLine = document.createElement('div');
+      pyLine.className = 'py-line';
+      pyLine.textContent = parsed.pinyin;
+      bubble.appendChild(pyLine);
+    }
+
+    if (parsed.thai) {
+      const thLine = document.createElement('div');
+      thLine.className = 'th-line';
+      thLine.textContent = parsed.thai;
+      bubble.appendChild(thLine);
+    }
+  } else {
+    bubble.textContent = text;
+  }
 
   msg.appendChild(label);
   msg.appendChild(bubble);
@@ -684,7 +774,7 @@ function addMessage(role, text) {
     const speakBtn = document.createElement('button');
     speakBtn.className = 'speak-btn';
     speakBtn.innerHTML = '🔊 ฟังอีกครั้ง';
-    speakBtn.addEventListener('click', () => speakChinese(text));
+    speakBtn.addEventListener('click', () => speakChinese(chineseForSpeech));
     msg.appendChild(speakBtn);
   }
 
@@ -712,13 +802,9 @@ function removeTyping() {
   if (t) t.remove();
 }
 
-function speakChinese(text) {
+function speakChinese(chineseText) {
   stopSpeaking();
-
-  // Extract Chinese text (before Pinyin line if formatted)
-  let chineseText = text;
-  const chineseMatch = text.match(/Chinese:\s*(.+)/);
-  if (chineseMatch) chineseText = chineseMatch[1];
+  if (!chineseText) return;
 
   const utter = new SpeechSynthesisUtterance(chineseText);
   utter.lang = 'zh-CN';
@@ -742,6 +828,11 @@ async function sendMessage(text) {
   if (!apiKey) {
     showSetupScreen();
     return;
+  }
+
+  // Voice trigger: พูดว่า "แปล"/"อธิบาย"/"translate" → เปิดโชว์ส่วนไทยอัตโนมัติ
+  if (/แปล|อธิบาย|translate/i.test(text)) {
+    setShowThai(true);
   }
 
   addMessage('user', text);
@@ -773,11 +864,11 @@ async function sendMessage(text) {
     const data = await response.json();
     removeTyping();
 
-    const reply = data.content?.[0]?.text || 'ขอโทษค่ะ เกิดข้อผิดพลาด';
+    const reply = data.content?.[0]?.text || 'CHINESE: 出错了\nPINYIN: chū cuò le\nTHAI: ขอโทษค่ะ เกิดข้อผิดพลาด';
     conversationHistory.push({ role: 'assistant', content: reply });
 
     addMessage('assistant', reply);
-    speakChinese(reply);
+    speakChinese(parseShifuReply(reply).chinese);
 
     status.className = '';
     status.textContent = 'กดปุ่มไมค์เพื่อพูดต่อ';
