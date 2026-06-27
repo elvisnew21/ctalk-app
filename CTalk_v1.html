@@ -34,7 +34,7 @@
     font-family: 'Sarabun', sans-serif;
     background: var(--paper);
     color: var(--ink);
-    min-height: 100dvh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -804,6 +804,7 @@ let recognition = null;
 let isListening = false;
 let currentUtterance = null;
 let speakLang = 'th-TH'; // ภาษาที่ผู้พูดจะใช้ — 'th-TH' หรือ 'zh-CN'
+let finalTranscriptBuffer = ''; // สะสมคำพูดที่ final แล้ว รอจนกว่าจะกดหยุดถึงส่ง
 
 const SPEAK_LANG_LABELS = { 'th-TH': '🗣️ ไทย', 'zh-CN': '🗣️ 中文' };
 
@@ -844,12 +845,13 @@ function setupSpeechRecognition() {
   }
 
   recognition = new SpeechRecognition();
-  recognition.continuous = false;
+  recognition.continuous = true; // ให้รอฟังต่อได้ ไม่ตัดทันทีที่เงียบแว็บเดียว (เผื่อเวลาคิดคำ)
   recognition.interimResults = true;
   recognition.lang = speakLang; // ใช้ภาษาตามที่ผู้ใช้เลือก toggle ไว้
 
   recognition.onstart = () => {
     isListening = true;
+    finalTranscriptBuffer = '';
     micBtn.classList.add('listening');
     status.className = 'listening';
     status.textContent = '🎤 กำลังฟัง...';
@@ -858,13 +860,11 @@ function setupSpeechRecognition() {
 
   recognition.onresult = (e) => {
     let interim = '';
-    let final = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      if (e.results[i].isFinal) finalTranscriptBuffer += e.results[i][0].transcript;
       else interim += e.results[i][0].transcript;
     }
-    transcriptEl.textContent = final || interim;
-    if (final) sendMessage(final.trim());
+    transcriptEl.textContent = finalTranscriptBuffer + interim;
   };
 
   recognition.onerror = (e) => {
@@ -877,7 +877,13 @@ function setupSpeechRecognition() {
     }
   };
 
-  recognition.onend = () => stopListening();
+  recognition.onend = () => {
+    stopListening();
+    if (finalTranscriptBuffer.trim()) {
+      sendMessage(finalTranscriptBuffer.trim());
+      finalTranscriptBuffer = '';
+    }
+  };
 
   return true;
 }
@@ -1219,7 +1225,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 5 (Speak lang toggle)</div>
+<div id="buildTag">CTalk v1 · Step 5b (STT fix + scroll fix)</div>
 
 </body>
 </html>
