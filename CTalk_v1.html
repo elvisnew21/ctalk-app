@@ -653,6 +653,22 @@
   .switch input:checked + .slider::before { transform: translateX(18px); }
 
   body.hide-pinyin .py-line { display: none; }
+
+  /* ===== BUILD TAG (debug helper — เช็คว่าโหลดไฟล์เวอร์ชันไหน) ===== */
+  #buildTag {
+    position: fixed;
+    bottom: 4px;
+    right: 8px;
+    font-size: 9px;
+    font-family: 'Courier New', monospace;
+    color: var(--gray);
+    opacity: 0.45;
+    z-index: 999;
+    pointer-events: none;
+    background: var(--paper);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
 </style>
 </head>
 <body>
@@ -1158,5 +1174,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
+<div id="buildTag">CTalk v1 · Step 4 (Sidebar)</div>
+
 </body>
 </html>
