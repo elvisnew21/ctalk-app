@@ -654,6 +654,23 @@
 
   body.hide-pinyin .py-line { display: none; }
 
+  .change-key-btn {
+    margin-top: auto;
+    width: 100%;
+    padding: 12px;
+    background: none;
+    border: 1.5px solid rgba(192,57,43,0.3);
+    color: var(--red);
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .change-key-btn:active { background: rgba(192,57,43,0.08); }
+
   /* ===== BUILD TAG (debug helper — เช็คว่าโหลดไฟล์เวอร์ชันไหน) ===== */
   #buildTag {
     position: fixed;
@@ -740,6 +757,8 @@
         <span class="slider"></span>
       </label>
     </div>
+
+    <button type="button" class="change-key-btn" id="changeKeyBtn">🔑 เปลี่ยน API Key</button>
   </div>
 </div>
 
@@ -796,6 +815,7 @@ const sidebarOverlay = document.getElementById('sidebarOverlay');
 const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
 const thaiSwitch = document.getElementById('thaiSwitch');
 const pinyinSwitch = document.getElementById('pinyinSwitch');
+const changeKeyBtn = document.getElementById('changeKeyBtn');
 
 // Setup STT
 function setupSpeechRecognition() {
@@ -924,6 +944,14 @@ thaiSwitch.addEventListener('change', () => setShowThai(thaiSwitch.checked));
 
 pinyinSwitch.addEventListener('change', () => {
   document.body.classList.toggle('hide-pinyin', !pinyinSwitch.checked);
+});
+
+changeKeyBtn.addEventListener('click', () => {
+  const confirmClear = confirm('ล้าง API Key ปัจจุบัน แล้วกรอกใหม่หรือไม่?');
+  if (!confirmClear) return;
+  localStorage.removeItem(API_KEY_STORAGE);
+  closeSidebar();
+  showSetupScreen();
 });
 
 // ===== PARSE STRUCTURED REPLY (CHINESE / PINYIN / THAI) =====
@@ -1174,7 +1202,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 4 (Sidebar)</div>
+<div id="buildTag">CTalk v1 · Step 4 (Sidebar + Change Key)</div>
 
 </body>
 </html>
