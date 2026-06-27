@@ -14,6 +14,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="师傅 CTalk">
 <link rel="apple-touch-icon" href="icon-192.png">
+<!-- pinyin-pro: แปลงตัวจีนเป็นพินอินฝั่ง client (เฉพาะ ZH mode ของ user ไม่ต้องยิง API เพิ่ม) -->
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.18.2/dist/index.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Sarabun:wght@300;400;600&display=swap');
 
@@ -130,6 +132,16 @@
   }
 
   .show-thai .th-line { display: block; }
+
+  /* พินอินฝั่ง user bubble (พื้นแดง ตัวขาว ต้องคนละสีจาก assistant) */
+  .user-py-line {
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    margin-top: 3px;
+    font-style: italic;
+  }
+
+  body.hide-pinyin .user-py-line { display: none; }
 
   /* Chat area */
   #chat {
@@ -363,16 +375,17 @@
 
   /* Scrollbar */
   #chat {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(139,115,85,0.45) transparent;
+    scrollbar-width: auto;
+    scrollbar-color: rgba(139,115,85,0.5) transparent;
   }
-  #chat::-webkit-scrollbar { width: 7px; }
+  #chat::-webkit-scrollbar { width: 11px; }
   #chat::-webkit-scrollbar-track { background: transparent; }
   #chat::-webkit-scrollbar-thumb {
-    background: rgba(139,115,85,0.4);
+    background: rgba(139,115,85,0.45);
     border-radius: 8px;
+    border: 2px solid var(--paper);
   }
-  #chat::-webkit-scrollbar-thumb:hover { background: rgba(139,115,85,0.65); }
+  #chat::-webkit-scrollbar-thumb:hover { background: rgba(139,115,85,0.7); }
 
   /* ===== SETUP SCREEN ===== */
   #setupOverlay {
@@ -985,6 +998,21 @@ changeKeyBtn.addEventListener('click', () => {
   showSetupScreen();
 });
 
+// ===== PINYIN HELPER (client-side, ใช้ pinyin-pro library) =====
+function getPinyin(chineseText) {
+  if (!chineseText) return '';
+  if (typeof pinyinPro === 'undefined') {
+    console.warn('pinyin-pro ยังโหลดไม่เสร็จ หรือโหลดไม่สำเร็จ');
+    return '';
+  }
+  try {
+    return pinyinPro.pinyin(chineseText, { toneType: 'symbol' });
+  } catch (e) {
+    console.warn('Pinyin conversion failed:', e);
+    return '';
+  }
+}
+
 // ===== PARSE STRUCTURED REPLY (CHINESE / PINYIN / THAI) =====
 function parseShifuReply(raw) {
   const extract = (label, stopLabels) => {
@@ -1043,6 +1071,17 @@ function addMessage(role, text) {
     }
   } else {
     bubble.textContent = text;
+
+    // ZH mode: ผู้พูดเลือกพูดจีน → แปลงเป็นพินอินโชว์ใต้ข้อความ (client-side, ไม่ยิง API เพิ่ม)
+    if (speakLang === 'zh-CN') {
+      const userPinyin = getPinyin(text);
+      if (userPinyin) {
+        const pyLine = document.createElement('div');
+        pyLine.className = 'user-py-line';
+        pyLine.textContent = userPinyin;
+        bubble.appendChild(pyLine);
+      }
+    }
   }
 
   msg.appendChild(label);
@@ -1233,7 +1272,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 5c (Scrollbar fix)</div>
+<div id="buildTag">CTalk v1 · Step 6 (ZH user pinyin + scrollbar)</div>
 
 </body>
 </html>
