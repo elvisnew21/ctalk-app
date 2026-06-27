@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>师傅 • ครูจีน</title>
+
+<!-- ===== PWA ===== -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#c0392b">
+<meta name="mobile-web-app-capable" content="yes">
+<!-- iOS -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="师傅 CTalk">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Sarabun:wght@300;400;600&display=swap');
+
+  :root {
+    --red: #c0392b;
+    --red-dark: #922b21;
+    --gold: #d4a843;
+    --ink: #1a1008;
+    --paper: #fdf6e3;
+    --paper-dark: #f5e6c8;
+    --gray: #8b7355;
+    --white: #fffef9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Sarabun', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(192,57,43,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(212,168,67,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(139,115,85,0.2);
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-char {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 32px;
+    color: var(--red);
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(192,57,43,0.2));
+  }
+
+  .title-block h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  .title-block p {
+    font-size: 12px;
+    color: var(--gray);
+    font-weight: 300;
+  }
+
+  .lang-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: white;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  /* Chat area */
+  #chat {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Welcome */
+  .welcome {
+    text-align: center;
+    padding: 32px 16px;
+    opacity: 0.7;
+  }
+
+  .welcome .big-char {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 64px;
+    color: var(--red);
+    opacity: 0.15;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .welcome p {
+    font-size: 13px;
+    color: var(--gray);
+    line-height: 1.8;
+  }
+
+  /* Message bubbles */
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 85%;
+    animation: fadeUp 0.3s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; align-items: flex-start; }
+
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  .msg.user .bubble {
+    background: var(--red);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.assistant .bubble {
+    background: var(--white);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(139,115,85,0.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .msg-label {
+    font-size: 10px;
+    color: var(--gray);
+    margin-bottom: 4px;
+    padding: 0 4px;
+  }
+
+  /* Speak button on assistant message */
+  .speak-btn {
+    margin-top: 6px;
+    background: none;
+    border: 1px solid rgba(192,57,43,0.3);
+    color: var(--red);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Sarabun', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+  }
+
+  .speak-btn:active { background: rgba(192,57,43,0.08); }
+
+  /* Typing indicator */
+  .typing-bubble {
+    background: var(--white);
+    border: 1px solid rgba(139,115,85,0.15);
+    padding: 12px 16px;
+    border-radius: 16px;
+    border-bottom-left-radius: 4px;
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+
+  .dot {
+    width: 7px; height: 7px;
+    background: var(--gray);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* Bottom area */
+  .bottom {
+    position: relative;
+    z-index: 10;
+    background: var(--white);
+    border-top: 1px solid rgba(139,115,85,0.15);
+    padding: 12px 16px 20px;
+  }
+
+  /* Status text */
+  #status {
+    text-align: center;
+    font-size: 12px;
+    color: var(--gray);
+    margin-bottom: 12px;
+    min-height: 16px;
+    transition: all 0.3s;
+  }
+
+  #status.listening { color: var(--red); font-weight: 600; }
+  #status.thinking { color: var(--gold); }
+
+  /* Transcript preview */
+  #transcript {
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink);
+    min-height: 20px;
+    margin-bottom: 10px;
+    font-style: italic;
+    opacity: 0.7;
+  }
+
+  /* Controls row */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  /* Mic button */
+  #micBtn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: none;
+    background: var(--red);
+    color: white;
+    font-size: 26px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(192,57,43,0.35);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #micBtn:active { transform: scale(0.94); }
+
+  #micBtn.listening {
+    background: var(--red-dark);
+    box-shadow: 0 4px 20px rgba(192,57,43,0.5);
+    animation: pulse 1.5s infinite;
+  }
+
+  #micBtn.disabled {
+    background: #ccc;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(192,57,43,0.5); }
+    50% { box-shadow: 0 4px 32px rgba(192,57,43,0.8), 0 0 0 12px rgba(192,57,43,0.1); }
+  }
+
+  /* Side buttons */
+  .side-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(139,115,85,0.25);
+    background: var(--paper);
+    color: var(--gray);
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .side-btn:active { background: var(--paper-dark); }
+
+  /* Translate hint */
+  .hint {
+    text-align: center;
+    font-size: 11px;
+    color: var(--gray);
+    margin-top: 8px;
+    opacity: 0.6;
+  }
+
+  /* Scrollbar */
+  #chat::-webkit-scrollbar { width: 3px; }
+  #chat::-webkit-scrollbar-track { background: transparent; }
+  #chat::-webkit-scrollbar-thumb { background: rgba(139,115,85,0.2); border-radius: 3px; }
+
+  /* ===== SETUP SCREEN ===== */
+  #setupOverlay {
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  #setupOverlay.hidden { display: none; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .setup-logo {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 72px;
+    color: var(--red);
+    opacity: 0.15;
+    line-height: 1;
+    margin-bottom: 8px;
+    user-select: none;
+  }
+
+  .setup-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+    text-align: center;
+  }
+
+  .setup-sub {
+    font-size: 13px;
+    color: var(--gray);
+    text-align: center;
+    line-height: 1.8;
+    margin-bottom: 28px;
+  }
+
+  .setup-card {
+    background: var(--white);
+    border: 1px solid rgba(139,115,85,0.2);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+
+  .setup-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  #apiKeyInput {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1.5px solid rgba(139,115,85,0.25);
+    border-radius: 10px;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+    letter-spacing: 0.3px;
+  }
+
+  #apiKeyInput:focus { border-color: var(--red); }
+
+  #apiKeyInput::placeholder {
+    color: var(--gray);
+    opacity: 0.4;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .setup-hint {
+    font-size: 11px;
+    color: var(--gray);
+    margin-top: 8px;
+    opacity: 0.65;
+    line-height: 1.6;
+  }
+
+  #setupError {
+    font-size: 12px;
+    color: var(--red);
+    margin-top: 8px;
+    min-height: 18px;
+    display: none;
+  }
+
+  #setupBtn {
+    width: 100%;
+    margin-top: 20px;
+    padding: 14px;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'Sarabun', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(192,57,43,0.3);
+  }
+
+  #setupBtn:active {
+    transform: scale(0.97);
+    background: var(--red-dark);
+  }
+
+  .setup-footer {
+    margin-top: 20px;
+    font-size: 11px;
+    color: var(--gray);
+    text-align: center;
+    opacity: 0.55;
+    line-height: 1.7;
+  }
+
+  .setup-footer a {
+    color: var(--red);
+    opacity: 0.8;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== SETUP SCREEN ===== -->
+<div id="setupOverlay">
+  <div class="setup-logo">师</div>
+  <h2 class="setup-title">师傅 Shīfu</h2>
+  <p class="setup-sub">ครูสอนภาษาจีนส่วนตัวของคุณ<br>ใส่ Anthropic API Key เพื่อเริ่มใช้งาน</p>
+
+  <div class="setup-card">
+    <label class="setup-label" for="apiKeyInput">Anthropic API Key</label>
+    <input
+      type="password"
+      id="apiKeyInput"
+      placeholder="sk-ant-api03-..."
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="none"
+      spellcheck="false"
+    />
+    <p class="setup-hint">
+      🔒 Key เก็บใน localStorage ของเครื่องเท่านั้น<br>
+      ส่งตรงไป Anthropic — ไม่ผ่านเซิร์ฟเวอร์อื่น
+    </p>
+    <div id="setupError"></div>
+    <button id="setupBtn">เริ่มใช้งาน &nbsp;开始 →</button>
+  </div>
+
+  <p class="setup-footer">
+    สร้าง key ได้ที่
+    <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>
+    แนะนำสร้าง project แยก: <code>ctalk-chinese-tutor</code>
+  </p>
+</div>
+
+<header>
+  <div class="logo-char">师</div>
+  <div class="title-block">
+    <h1>师傅 Shīfu</h1>
+    <p>ครูสอนภาษาจีนส่วนตัว</p>
+  </div>
+  <div class="lang-badge">ZH ↔ TH</div>
+</header>
+
+<div id="chat">
+  <div class="welcome" id="welcome">
+    <div class="big-char">你好</div>
+    <p>กดปุ่ม 🎤 แล้วพูดได้เลยค่ะ<br>
+    พูดไทยหรือจีนก็ได้<br>
+    ครูจะตอบเป็นภาษาจีน พร้อม Pinyin<br><br>
+    พูดว่า <strong>"แปล"</strong> เมื่อต้องการคำอธิบายภาษาไทย</p>
+  </div>
+</div>
+
+<div class="bottom">
+  <div id="status">กดปุ่มไมค์เพื่อเริ่ม</div>
+  <div id="transcript"></div>
+  <div class="controls">
+    <button class="side-btn" id="clearBtn" title="ล้างประวัติ">🗑️</button>
+    <button id="micBtn" title="กดพูด">🎤</button>
+    <button class="side-btn" id="stopBtn" title="หยุดพูด">⏹️</button>
+  </div>
+  <div class="hint">พูดว่า "แปล" เพื่อขอคำอธิบายภาษาไทย</div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `คุณคือ 师傅 (Shīfu) ครูสอนภาษาจีนกลาง (普通话) ที่เชี่ยวชาญและอบอุ่น
+
+กฎการตอบ:
+1. ตอบเป็นภาษาจีนเสมอ พร้อม Pinyin กำกับทุกประโยค
+2. ถ้านักเรียนพูดว่า "แปล" หรือ "อธิบาย" หรือ "translate" ให้อธิบายเป็นภาษาไทยด้วย
+3. ถ้านักเรียนพูดผิด ให้แก้ไขอย่างอ่อนโยนและแสดงประโยคที่ถูกต้อง
+4. ตอบกระชับ ไม่ยาวเกิน 3-4 ประโยค
+5. สอนคำศัพท์หรือ grammar เพิ่มเติมเมื่อเหมาะสม
+6. ใช้ภาษาจีนตัวย่อ (简体字)
+
+รูปแบบการตอบ:
+Chinese: [ประโยคจีน]
+Pinyin: [pinyin]
+(ถ้าต้องแปล) ไทย: [คำแปล]`;
+
+let conversationHistory = [];
+let recognition = null;
+let isListening = false;
+let currentUtterance = null;
+
+const chat = document.getElementById('chat');
+const micBtn = document.getElementById('micBtn');
+const stopBtn = document.getElementById('stopBtn');
+const clearBtn = document.getElementById('clearBtn');
+const status = document.getElementById('status');
+const transcriptEl = document.getElementById('transcript');
+const welcome = document.getElementById('welcome');
+
+// Setup STT
+function setupSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    status.textContent = '❌ เบราว์เซอร์ไม่รองรับ STT — ใช้ Chrome นะคะ';
+    micBtn.classList.add('disabled');
+    return false;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.lang = 'th-TH'; // Thai + will pick up Chinese too
+
+  recognition.onstart = () => {
+    isListening = true;
+    micBtn.classList.add('listening');
+    status.className = 'listening';
+    status.textContent = '🎤 กำลังฟัง...';
+    transcriptEl.textContent = '';
+  };
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    transcriptEl.textContent = final || interim;
+    if (final) sendMessage(final.trim());
+  };
+
+  recognition.onerror = (e) => {
+    console.error('STT error:', e.error);
+    stopListening();
+    if (e.error === 'no-speech') {
+      status.textContent = 'ไม่ได้ยินเสียง — ลองใหม่นะคะ';
+    } else {
+      status.textContent = `Error: ${e.error}`;
+    }
+  };
+
+  recognition.onend = () => stopListening();
+
+  return true;
+}
+
+function startListening() {
+  if (!recognition && !setupSpeechRecognition()) return;
+  if (isListening) return;
+  stopSpeaking();
+  try {
+    recognition.start();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function stopListening() {
+  isListening = false;
+  micBtn.classList.remove('listening');
+  if (!status.classList.contains('thinking')) {
+    status.className = '';
+    status.textContent = 'กดปุ่มไมค์เพื่อเริ่ม';
+  }
+}
+
+function stopSpeaking() {
+  window.speechSynthesis.cancel();
+}
+
+micBtn.addEventListener('click', () => {
+  if (micBtn.classList.contains('disabled')) return;
+  if (isListening) {
+    recognition.stop();
+  } else {
+    startListening();
+  }
+});
+
+stopBtn.addEventListener('click', () => {
+  stopSpeaking();
+  if (isListening) recognition.stop();
+});
+
+clearBtn.addEventListener('click', () => {
+  conversationHistory = [];
+  chat.innerHTML = '';
+  chat.appendChild(welcome);
+  welcome.style.display = 'block';
+  transcriptEl.textContent = '';
+  status.textContent = 'กดปุ่มไมค์เพื่อเริ่ม';
+});
+
+function addMessage(role, text) {
+  if (welcome) welcome.style.display = 'none';
+
+  const msg = document.createElement('div');
+  msg.className = `msg ${role}`;
+
+  const label = document.createElement('div');
+  label.className = 'msg-label';
+  label.textContent = role === 'user' ? 'นิว' : '师傅 Shīfu';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+
+  msg.appendChild(label);
+  msg.appendChild(bubble);
+
+  if (role === 'assistant') {
+    const speakBtn = document.createElement('button');
+    speakBtn.className = 'speak-btn';
+    speakBtn.innerHTML = '🔊 ฟังอีกครั้ง';
+    speakBtn.addEventListener('click', () => speakChinese(text));
+    msg.appendChild(speakBtn);
+  }
+
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
+  return msg;
+}
+
+function addTyping() {
+  const msg = document.createElement('div');
+  msg.className = 'msg assistant';
+  msg.id = 'typing';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'typing-bubble';
+  bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+  msg.appendChild(bubble);
+  chat.appendChild(msg);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing');
+  if (t) t.remove();
+}
+
+function speakChinese(text) {
+  stopSpeaking();
+
+  // Extract Chinese text (before Pinyin line if formatted)
+  let chineseText = text;
+  const chineseMatch = text.match(/Chinese:\s*(.+)/);
+  if (chineseMatch) chineseText = chineseMatch[1];
+
+  const utter = new SpeechSynthesisUtterance(chineseText);
+  utter.lang = 'zh-CN';
+  utter.rate = 0.85;
+  utter.pitch = 1.0;
+
+  // Try to find Chinese voice
+  const voices = window.speechSynthesis.getVoices();
+  const chineseVoice = voices.find(v => v.lang.startsWith('zh') && v.lang.includes('CN'))
+                    || voices.find(v => v.lang.startsWith('zh'));
+  if (chineseVoice) utter.voice = chineseVoice;
+
+  window.speechSynthesis.speak(utter);
+}
+
+async function sendMessage(text) {
+  if (!text) return;
+
+  // Guard: ถ้าไม่มี key ให้กลับไป setup แทน
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    showSetupScreen();
+    return;
+  }
+
+  addMessage('user', text);
+  transcriptEl.textContent = '';
+
+  conversationHistory.push({ role: 'user', content: text });
+
+  addTyping();
+  status.className = 'thinking';
+  status.textContent = '师傅 กำลังคิด...';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: conversationHistory
+      })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    const reply = data.content?.[0]?.text || 'ขอโทษค่ะ เกิดข้อผิดพลาด';
+    conversationHistory.push({ role: 'assistant', content: reply });
+
+    addMessage('assistant', reply);
+    speakChinese(reply);
+
+    status.className = '';
+    status.textContent = 'กดปุ่มไมค์เพื่อพูดต่อ';
+
+  } catch (err) {
+    removeTyping();
+    console.error(err);
+    status.className = '';
+    status.textContent = '❌ เชื่อมต่อไม่ได้ — เช็ค internet ด้วยนะคะ';
+  }
+}
+
+// ===== API KEY MANAGEMENT =====
+const API_KEY_STORAGE = 'ctalk_api_key';
+
+function getApiKey() {
+  return localStorage.getItem(API_KEY_STORAGE);
+}
+
+function validateKeyFormat(key) {
+  const trimmed = key.trim();
+  if (!trimmed) return 'กรุณาใส่ API Key ค่ะ';
+  if (!trimmed.startsWith('sk-ant-')) return 'Key ต้องขึ้นต้นด้วย sk-ant-';
+  if (trimmed.length < 30) return 'Key ดูสั้นเกินไป — ตรวจสอบอีกครั้งนะคะ';
+  return null; // ผ่าน
+}
+
+function showSetupScreen() {
+  document.getElementById('setupOverlay').classList.remove('hidden');
+}
+
+function hideSetupScreen() {
+  document.getElementById('setupOverlay').classList.add('hidden');
+}
+
+function initApp() {
+  const key = getApiKey();
+  if (key) {
+    hideSetupScreen();
+    setupSpeechRecognition();
+  } else {
+    showSetupScreen();
+  }
+}
+
+// Setup button
+document.getElementById('setupBtn').addEventListener('click', () => {
+  const input    = document.getElementById('apiKeyInput');
+  const errorEl  = document.getElementById('setupError');
+  const key      = input.value.trim();
+
+  const error = validateKeyFormat(key);
+  if (error) {
+    errorEl.textContent = '❌ ' + error;
+    errorEl.style.display = 'block';
+    input.focus();
+    return;
+  }
+
+  // บันทึก key
+  localStorage.setItem(API_KEY_STORAGE, key);
+  errorEl.style.display = 'none';
+  input.value = '';
+
+  hideSetupScreen();
+  setupSpeechRecognition();
+});
+
+// Enter key shortcut
+document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('setupBtn').click();
+});
+
+// ===== PWA: Service Worker registration =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('CTalk Service Worker: registered'))
+      .catch((err) => console.warn('SW registration failed:', err));
+  });
+}
+
+// Load voices
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+initApp();
+</script>
+</body>
+</html>
