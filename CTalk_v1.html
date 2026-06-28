@@ -88,7 +88,6 @@
   }
 
   .lang-badge {
-    margin-left: auto;
     background: var(--red);
     color: white;
     font-size: 10px;
@@ -562,6 +561,8 @@
     flex-shrink: 0;
   }
 
+  header #translateToggle { margin-left: auto; }
+
   .settings-btn:active { background: var(--paper-dark); }
 
   /* ===== SIDEBAR ===== */
@@ -795,8 +796,8 @@
     <h1>师傅 Shīfu</h1>
     <p>ครูสอนภาษาจีนส่วนตัว</p>
   </div>
-  <button type="button" class="lang-badge" id="speakLangToggle" title="เลือกภาษาที่จะพูด">🗣️ ไทย</button>
   <button type="button" class="settings-btn" id="translateToggle" title="กดเพื่อโชว์/ซ่อนคำแปลไทย">🌐</button>
+  <button type="button" class="settings-btn" id="clearBtn" title="ล้างประวัติการสนทนา">🗑️</button>
   <button type="button" class="settings-btn" id="settingsBtn" title="ตั้งค่า">⚙️</button>
 </header>
 
@@ -880,7 +881,8 @@
   <div id="status">กดปุ่มไมค์เพื่อเริ่ม</div>
   <div id="transcript"></div>
   <div class="controls">
-    <button class="side-btn" id="clearBtn" title="ล้างประวัติ">🗑️</button>
+    <button class="side-btn" id="clearTranscriptBtn" title="ล้างคำที่พูดไว้ (ยังไม่ส่ง)">❌</button>
+    <button type="button" class="lang-badge" id="speakLangToggle" title="เลือกภาษาที่จะพูด">🗣️ ไทย</button>
     <button id="micBtn" title="กดพูด">🎤</button>
     <button class="side-btn" id="stopBtn" title="หยุดพูด">⏹️</button>
     <button class="side-btn" id="repeatBtn" title="ฟังคำตอบล่าสุดอีกครั้ง">🔁</button>
@@ -908,6 +910,7 @@ let isListening = false;
 let currentUtterance = null;
 let speakLang = 'th-TH'; // ภาษาที่ผู้พูดจะใช้ — 'th-TH' หรือ 'zh-CN'
 let finalTranscriptBuffer = ''; // สะสมคำพูดที่ final แล้ว รอจนกว่าจะกดหยุดถึงส่ง
+let discardPending = false; // true เมื่อกดปุ่มล้างคำพูด — กันไม่ให้ onend ส่งข้อความที่กำลังจะยกเลิก
 let speechRate = 0.85; // ความเร็วเสียงปกติ (ของเดิม) — สลับเป็น 0.6 ตอนเปิด "พูดช้าพิเศษ"
 let selectedVoiceURI = ''; // เสียงที่ผู้ใช้เลือกจาก dropdown (ถ้ามี)
 let lastAssistantChinese = ''; // เก็บคำตอบจีนล่าสุด ไว้ให้ปุ่ม Repeat เรียกซ้ำได้
@@ -933,6 +936,7 @@ const pushToTalkSwitch = document.getElementById('pushToTalkSwitch');
 const slowSpeechSwitch = document.getElementById('slowSpeechSwitch');
 const voiceSelect = document.getElementById('voiceSelect');
 const repeatBtn = document.getElementById('repeatBtn');
+const clearTranscriptBtn = document.getElementById('clearTranscriptBtn');
 const changeKeyBtn = document.getElementById('changeKeyBtn');
 
 function setSpeakLang(lang) {
@@ -990,6 +994,11 @@ function setupSpeechRecognition() {
 
   recognition.onend = () => {
     stopListening();
+    if (discardPending) {
+      discardPending = false;
+      finalTranscriptBuffer = '';
+      return;
+    }
     if (finalTranscriptBuffer.trim()) {
       sendMessage(finalTranscriptBuffer.trim());
       finalTranscriptBuffer = '';
@@ -1073,6 +1082,16 @@ repeatBtn.addEventListener('click', () => {
   if (lastAssistantChinese) speakChinese(lastAssistantChinese);
 });
 
+// ล้างคำที่พูดไว้ (ยังไม่ส่ง) — กันกรณี STT จับคำผิด ไม่ต้องส่งขยะไปให้ Shīfu ตอบงงๆ
+clearTranscriptBtn.addEventListener('click', () => {
+  finalTranscriptBuffer = '';
+  transcriptEl.textContent = '';
+  if (isListening) {
+    discardPending = true;
+    recognition.stop(); // จะวนเข้า onend แต่ flag กันไม่ให้ส่ง
+  }
+});
+
 stopBtn.addEventListener('click', () => {
   stopSpeaking();
   if (isListening) recognition.stop();
@@ -1084,7 +1103,7 @@ clearBtn.addEventListener('click', () => {
   chat.appendChild(welcome);
   welcome.style.display = 'block';
   transcriptEl.textContent = '';
-  status.textContent = 'กดปุ่มไมค์เพื่อเริ่ม';
+  status.textContent = getIdleStatusText();
 });
 
 // ===== TRANSLATE TOGGLE (โชว์/ซ่อนส่วนภาษาไทย) =====
@@ -1537,7 +1556,7 @@ window.speechSynthesis.onvoiceschanged = () => populateVoiceList();
 populateVoiceList(); // เผื่อบางเบราว์เซอร์โหลด voices เสร็จไปแล้วก่อน listener ติด
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Phase 1B complete (Step 9: repeat/rate/voice/tone-color)</div>
+<div id="buildTag">CTalk v1 · Layout v2 (clear-transcript, header reorg, lang-toggle moved down)</div>
 
 </body>
 </html>
