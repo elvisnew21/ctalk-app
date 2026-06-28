@@ -690,6 +690,20 @@
 
   body.hide-pinyin .py-line { display: none; }
 
+  /* Pinyin color-by-tone (assistant bubble - พื้นขาว) */
+  .tone-1 { color: #2980b9; } /* เสียงที่ 1 ระดับ - น้ำเงิน */
+  .tone-2 { color: #27ae60; } /* เสียงที่ 2 ขึ้น - เขียว */
+  .tone-3 { color: #8e44ad; } /* เสียงที่ 3 หยัก - ม่วง */
+  .tone-4 { color: #d35400; } /* เสียงที่ 4 ลง - ส้มเข้ม */
+  .tone-0 { color: inherit; } /* เสียงเบา - ไม่มีสี */
+
+  /* Pinyin color-by-tone (user bubble - พื้นแดง ต้องสว่างขึ้นให้ contrast พอ) */
+  .msg.user .tone-1 { color: #aed6f1; }
+  .msg.user .tone-2 { color: #a9dfbf; }
+  .msg.user .tone-3 { color: #e8daef; }
+  .msg.user .tone-4 { color: #f8c471; }
+  .msg.user .tone-0 { color: inherit; }
+
   .change-key-btn {
     margin-top: auto;
     width: 100%;
@@ -706,6 +720,23 @@
   }
 
   .change-key-btn:active { background: rgba(192,57,43,0.08); }
+
+  .voice-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .voice-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1.5px solid rgba(139,115,85,0.25);
+    border-radius: 8px;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 12px;
+    font-family: 'Sarabun', sans-serif;
+  }
 
   /* ===== BUILD TAG (debug helper — เช็คว่าโหลดไฟล์เวอร์ชันไหน) ===== */
   #buildTag {
@@ -805,7 +836,7 @@
       </label>
     </div>
 
-    <div class="sidebar-section-label">การพูด</div>
+    <div class="sidebar-section-label">การพูด (ไมค์)</div>
 
     <div class="setting-row">
       <span>กดค้างเพื่อพูด (Push-to-talk)</span>
@@ -813,6 +844,21 @@
         <input type="checkbox" id="pushToTalkSwitch">
         <span class="slider"></span>
       </label>
+    </div>
+
+    <div class="sidebar-section-label">เสียงตอบ (师傅 พูด)</div>
+
+    <div class="setting-row">
+      <span>พูดช้าพิเศษ</span>
+      <label class="switch">
+        <input type="checkbox" id="slowSpeechSwitch">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row voice-row">
+      <span>เลือกเสียงพูด</span>
+      <select id="voiceSelect" class="voice-select"></select>
     </div>
 
     <button type="button" class="change-key-btn" id="changeKeyBtn">🔑 เปลี่ยน API Key</button>
@@ -837,6 +883,7 @@
     <button class="side-btn" id="clearBtn" title="ล้างประวัติ">🗑️</button>
     <button id="micBtn" title="กดพูด">🎤</button>
     <button class="side-btn" id="stopBtn" title="หยุดพูด">⏹️</button>
+    <button class="side-btn" id="repeatBtn" title="ฟังคำตอบล่าสุดอีกครั้ง">🔁</button>
   </div>
   <div class="hint">กดปุ่ม 🌐 หรือพูดว่า "แปล" เพื่อโชว์คำอธิบายภาษาไทย · กดปุ่ม 🗣️ เพื่อสลับภาษาที่จะพูด</div>
 </div>
@@ -861,6 +908,9 @@ let isListening = false;
 let currentUtterance = null;
 let speakLang = 'th-TH'; // ภาษาที่ผู้พูดจะใช้ — 'th-TH' หรือ 'zh-CN'
 let finalTranscriptBuffer = ''; // สะสมคำพูดที่ final แล้ว รอจนกว่าจะกดหยุดถึงส่ง
+let speechRate = 0.85; // ความเร็วเสียงปกติ (ของเดิม) — สลับเป็น 0.6 ตอนเปิด "พูดช้าพิเศษ"
+let selectedVoiceURI = ''; // เสียงที่ผู้ใช้เลือกจาก dropdown (ถ้ามี)
+let lastAssistantChinese = ''; // เก็บคำตอบจีนล่าสุด ไว้ให้ปุ่ม Repeat เรียกซ้ำได้
 
 const SPEAK_LANG_LABELS = { 'th-TH': '🗣️ ไทย', 'zh-CN': '🗣️ 中文' };
 
@@ -880,6 +930,9 @@ const thaiSwitch = document.getElementById('thaiSwitch');
 const pinyinSwitch = document.getElementById('pinyinSwitch');
 const translateUserSwitch = document.getElementById('translateUserSwitch');
 const pushToTalkSwitch = document.getElementById('pushToTalkSwitch');
+const slowSpeechSwitch = document.getElementById('slowSpeechSwitch');
+const voiceSelect = document.getElementById('voiceSelect');
+const repeatBtn = document.getElementById('repeatBtn');
 const changeKeyBtn = document.getElementById('changeKeyBtn');
 
 function setSpeakLang(lang) {
@@ -1006,6 +1059,18 @@ micBtn.addEventListener('pointercancel', stopPushToTalk);
 // สลับโหมด → อัปเดตข้อความ hint ให้ตรงกับโหมดปัจจุบัน (เฉพาะตอนไม่ได้ฟังอยู่)
 pushToTalkSwitch.addEventListener('change', () => {
   if (!isListening) status.textContent = getIdleStatusText();
+});
+
+slowSpeechSwitch.addEventListener('change', () => {
+  speechRate = slowSpeechSwitch.checked ? 0.6 : 0.85;
+});
+
+voiceSelect.addEventListener('change', () => {
+  selectedVoiceURI = voiceSelect.value;
+});
+
+repeatBtn.addEventListener('click', () => {
+  if (lastAssistantChinese) speakChinese(lastAssistantChinese);
 });
 
 stopBtn.addEventListener('click', () => {
@@ -1135,7 +1200,7 @@ async function appendUserTranslation(msgEl, thaiText) {
   if (pinyinText) {
     const pyLine = document.createElement('div');
     pyLine.className = 'user-py-line';
-    pyLine.textContent = pinyinText;
+    pyLine.innerHTML = colorizePinyinHTML(pinyinText);
     bubble.appendChild(pyLine);
   }
 
@@ -1161,6 +1226,40 @@ function parseShifuReply(raw) {
   return { chinese, pinyin, thai };
 }
 
+// ===== PINYIN COLOR-BY-TONE =====
+const TONE1_CHARS = 'āēīōūǖ';
+const TONE2_CHARS = 'áéíóúǘ';
+const TONE3_CHARS = 'ǎěǐǒǔǚ';
+const TONE4_CHARS = 'àèìòùǜ';
+
+function detectTone(syllable) {
+  const lower = syllable.toLowerCase();
+  for (const ch of lower) {
+    if (TONE1_CHARS.includes(ch)) return 1;
+    if (TONE2_CHARS.includes(ch)) return 2;
+    if (TONE3_CHARS.includes(ch)) return 3;
+    if (TONE4_CHARS.includes(ch)) return 4;
+  }
+  if (/[a-z]/i.test(syllable)) return 0; // มีตัวอักษรแต่ไม่มี tone mark = เสียงเบา
+  return null; // ไม่ใช่ syllable (เครื่องหมายวรรคตอน/ช่องว่าง)
+}
+
+function escapeHTML(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// แปลง pinyin text ดิบ → HTML string ที่ครอบแต่ละพยางค์ด้วย <span class="tone-N"> ตาม tone
+function colorizePinyinHTML(pinyinText) {
+  if (!pinyinText) return '';
+  return pinyinText.split(/(\s+)/).map((token) => {
+    if (token === '' || /^\s+$/.test(token)) return token;
+    const tone = detectTone(token);
+    const safe = escapeHTML(token);
+    if (tone === null) return safe;
+    return `<span class="tone-${tone}">${safe}</span>`;
+  }).join('');
+}
+
 function addMessage(role, text) {
   if (welcome) welcome.style.display = 'none';
 
@@ -1179,6 +1278,7 @@ function addMessage(role, text) {
   if (role === 'assistant') {
     const parsed = parseShifuReply(text);
     chineseForSpeech = parsed.chinese;
+    lastAssistantChinese = parsed.chinese; // เก็บไว้ให้ปุ่ม Repeat เรียกซ้ำได้
 
     const cnLine = document.createElement('div');
     cnLine.className = 'cn-line';
@@ -1188,7 +1288,7 @@ function addMessage(role, text) {
     if (parsed.pinyin) {
       const pyLine = document.createElement('div');
       pyLine.className = 'py-line';
-      pyLine.textContent = parsed.pinyin;
+      pyLine.innerHTML = colorizePinyinHTML(parsed.pinyin);
       bubble.appendChild(pyLine);
     }
 
@@ -1207,7 +1307,7 @@ function addMessage(role, text) {
       if (userPinyin) {
         const pyLine = document.createElement('div');
         pyLine.className = 'user-py-line';
-        pyLine.textContent = userPinyin;
+        pyLine.innerHTML = colorizePinyinHTML(userPinyin);
         bubble.appendChild(pyLine);
       }
     }
@@ -1254,16 +1354,46 @@ function speakChinese(chineseText) {
 
   const utter = new SpeechSynthesisUtterance(chineseText);
   utter.lang = 'zh-CN';
-  utter.rate = 0.85;
+  utter.rate = speechRate;
   utter.pitch = 1.0;
 
-  // Try to find Chinese voice
+  // ใช้เสียงที่เลือกไว้ใน sidebar ก่อน ถ้าไม่มี/ไม่เจอ → fallback หาเสียงจีนตัวแรกที่เจอ
   const voices = window.speechSynthesis.getVoices();
-  const chineseVoice = voices.find(v => v.lang.startsWith('zh') && v.lang.includes('CN'))
-                    || voices.find(v => v.lang.startsWith('zh'));
+  let chineseVoice = selectedVoiceURI ? voices.find(v => v.voiceURI === selectedVoiceURI) : null;
+  if (!chineseVoice) {
+    chineseVoice = voices.find(v => v.lang.startsWith('zh') && v.lang.includes('CN'))
+                || voices.find(v => v.lang.startsWith('zh'));
+  }
   if (chineseVoice) utter.voice = chineseVoice;
 
   window.speechSynthesis.speak(utter);
+}
+
+// ===== เติม dropdown รายชื่อเสียงภาษาจีนที่เครื่องมี (จำนวน/ชื่อขึ้นกับเครื่อง) =====
+function populateVoiceList() {
+  const zhVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('zh'));
+  voiceSelect.innerHTML = '';
+
+  if (zhVoices.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'ไม่พบเสียงภาษาจีนในเครื่องนี้';
+    voiceSelect.appendChild(opt);
+    return;
+  }
+
+  zhVoices.forEach((v) => {
+    const opt = document.createElement('option');
+    opt.value = v.voiceURI;
+    opt.textContent = `${v.name} (${v.lang})`;
+    voiceSelect.appendChild(opt);
+  });
+
+  // ถ้ายังไม่เคยเลือก หรือเสียงที่เคยเลือกหายไป (เปลี่ยนเครื่อง/เบราว์เซอร์) → ใช้ตัวแรกเป็น default
+  if (!selectedVoiceURI || !zhVoices.some(v => v.voiceURI === selectedVoiceURI)) {
+    selectedVoiceURI = zhVoices[0].voiceURI;
+  }
+  voiceSelect.value = selectedVoiceURI;
 }
 
 async function sendMessage(text) {
@@ -1403,10 +1533,11 @@ if ('serviceWorker' in navigator) {
 }
 
 // Load voices
-window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.speechSynthesis.onvoiceschanged = () => populateVoiceList();
+populateVoiceList(); // เผื่อบางเบราว์เซอร์โหลด voices เสร็จไปแล้วก่อน listener ติด
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 8 (Push-to-talk) — Phase 1B done</div>
+<div id="buildTag">CTalk v1 · Phase 1B complete (Step 9: repeat/rate/voice/tone-color)</div>
 
 </body>
 </html>
