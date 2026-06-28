@@ -805,6 +805,16 @@
       </label>
     </div>
 
+    <div class="sidebar-section-label">การพูด</div>
+
+    <div class="setting-row">
+      <span>กดค้างเพื่อพูด (Push-to-talk)</span>
+      <label class="switch">
+        <input type="checkbox" id="pushToTalkSwitch">
+        <span class="slider"></span>
+      </label>
+    </div>
+
     <button type="button" class="change-key-btn" id="changeKeyBtn">🔑 เปลี่ยน API Key</button>
   </div>
 </div>
@@ -869,6 +879,7 @@ const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
 const thaiSwitch = document.getElementById('thaiSwitch');
 const pinyinSwitch = document.getElementById('pinyinSwitch');
 const translateUserSwitch = document.getElementById('translateUserSwitch');
+const pushToTalkSwitch = document.getElementById('pushToTalkSwitch');
 const changeKeyBtn = document.getElementById('changeKeyBtn');
 
 function setSpeakLang(lang) {
@@ -946,12 +957,16 @@ function startListening() {
   }
 }
 
+function getIdleStatusText() {
+  return pushToTalkSwitch.checked ? 'กดค้างปุ่มไมค์เพื่อพูด' : 'กดปุ่มไมค์เพื่อเริ่ม';
+}
+
 function stopListening() {
   isListening = false;
   micBtn.classList.remove('listening');
   if (!status.classList.contains('thinking')) {
     status.className = '';
-    status.textContent = 'กดปุ่มไมค์เพื่อเริ่ม';
+    status.textContent = getIdleStatusText();
   }
 }
 
@@ -959,13 +974,38 @@ function stopSpeaking() {
   window.speechSynthesis.cancel();
 }
 
+// Toggle mode (ปกติ): กดครั้งแรกเริ่มฟัง กดอีกครั้งหยุด+ส่ง
 micBtn.addEventListener('click', () => {
   if (micBtn.classList.contains('disabled')) return;
+  if (pushToTalkSwitch.checked) return; // โหมด push-to-talk ใช้ pointerdown/up แทน ไม่ใช้ click
   if (isListening) {
     recognition.stop();
   } else {
     startListening();
   }
+});
+
+// Push-to-talk mode: กดค้างไว้ตลอดที่พูด ปล่อยนิ้ว/เมาส์ = หยุด+ส่ง
+function stopPushToTalk() {
+  if (pushToTalkSwitch.checked && isListening) {
+    recognition.stop();
+  }
+}
+
+micBtn.addEventListener('pointerdown', (e) => {
+  if (micBtn.classList.contains('disabled')) return;
+  if (!pushToTalkSwitch.checked) return;
+  e.preventDefault();
+  startListening();
+});
+
+micBtn.addEventListener('pointerup', stopPushToTalk);
+micBtn.addEventListener('pointerleave', stopPushToTalk);
+micBtn.addEventListener('pointercancel', stopPushToTalk);
+
+// สลับโหมด → อัปเดตข้อความ hint ให้ตรงกับโหมดปัจจุบัน (เฉพาะตอนไม่ได้ฟังอยู่)
+pushToTalkSwitch.addEventListener('change', () => {
+  if (!isListening) status.textContent = getIdleStatusText();
 });
 
 stopBtn.addEventListener('click', () => {
@@ -1366,7 +1406,7 @@ if ('serviceWorker' in navigator) {
 window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Step 7 (TH→ZH translate toggle)</div>
+<div id="buildTag">CTalk v1 · Step 8 (Push-to-talk) — Phase 1B done</div>
 
 </body>
 </html>
