@@ -780,6 +780,59 @@
 
   .level-btn:active { transform: scale(0.96); }
 
+  /* ===== HSK WORD HIGHLIGHT + TOOLTIP — Phase 1C Step 2 ===== */
+  .hsk-hl {
+    background: rgba(212,168,67,0.22);
+    border-bottom: 1.5px dotted var(--gold);
+    cursor: pointer;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+
+  .hsk-hl:active { background: rgba(212,168,67,0.4); }
+
+  #hskTooltip {
+    position: fixed;
+    z-index: 300;
+    max-width: 240px;
+    background: var(--ink);
+    color: var(--white);
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.6;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    display: none;
+    pointer-events: none;
+  }
+
+  #hskTooltip.show { display: block; }
+
+  #hskTooltip .tt-hanzi {
+    font-family: 'Noto Serif SC', serif;
+    font-size: 16px;
+    color: var(--gold);
+    margin-bottom: 2px;
+  }
+
+  #hskTooltip .tt-py {
+    font-size: 11px;
+    opacity: 0.75;
+    font-style: italic;
+    margin-bottom: 5px;
+  }
+
+  #hskTooltip .tt-en {
+    font-size: 12px;
+    opacity: 0.9;
+  }
+
+  #hskTooltip .tt-th {
+    font-size: 12px;
+    margin-top: 3px;
+    color: var(--gold);
+  }
+
   /* ===== BUILD TAG (debug helper — เช็คว่าโหลดไฟล์เวอร์ชันไหน) ===== */
   #buildTag {
     position: fixed;
@@ -939,6 +992,9 @@
   <div class="hint">กดปุ่ม 🌐 หรือพูดว่า "แปล" เพื่อโชว์คำอธิบายภาษาไทย · กดปุ่ม 🗣️ เพื่อสลับภาษาที่จะพูด</div>
 </div>
 
+<!-- ===== HSK TOOLTIP (Phase 1C Step 2) ===== -->
+<div id="hskTooltip"></div>
+
 <script>
 const SYSTEM_PROMPT = `คุณคือ 师傅 (Shīfu) ครูสอนภาษาจีนกลาง (普通话) ที่เชี่ยวชาญและอบอุ่น
 
@@ -970,6 +1026,32 @@ const LEVEL_PROMPTS = {
 - ใช้ grammar ที่ซับซ้อนได้ เช่น 把, 被, 是...的, ประโยคซ้อน, complement ต่างๆ
 - คำตอบยาวขึ้นได้ตามธรรมชาติของบทสนทนา ไม่ต้องจำกัดสั้น`
 };
+
+// ===== HSK DATA (Phase 1C Step 2) =====
+// dictionary คำศัพท์ HSK1-6 (~5000 คำ) โหลดจาก hsk-data.json — cache โดย sw.js
+let hskDict = null;       // Map<hanzi, {pinyin, level, meaning_en, meaning_th}>
+let hskMaxLen = 4;        // ความยาวคำที่ยาวที่สุดใน dict (ใช้จำกัด greedy search)
+let hskDataReady = false;
+
+async function loadHskData() {
+  try {
+    const res = await fetch('hsk-data.json');
+    if (!res.ok) throw new Error('fetch hsk-data.json failed: ' + res.status);
+    const list = await res.json();
+    hskDict = new Map();
+    let maxLen = 1;
+    for (const w of list) {
+      hskDict.set(w.hanzi, { pinyin: w.pinyin, level: w.level, meaning_en: w.meaning_en, meaning_th: w.meaning_th });
+      if (w.hanzi.length > maxLen) maxLen = w.hanzi.length;
+    }
+    hskMaxLen = maxLen;
+    hskDataReady = true;
+    console.log('CTalk: HSK data loaded,', hskDict.size, 'words, max length', hskMaxLen);
+  } catch (e) {
+    console.warn('CTalk: โหลด hsk-data.json ไม่สำเร็จ — ฟีเจอร์ highlight จะถูกปิดไว้ก่อน', e);
+    hskDataReady = false;
+  }
+}
 
 let conversationHistory = [];
 let recognition = null;
@@ -1009,6 +1091,7 @@ const clearTranscriptBtn = document.getElementById('clearTranscriptBtn');
 const changeKeyBtn = document.getElementById('changeKeyBtn');
 const levelSelector = document.getElementById('levelSelector');
 const levelBtns = levelSelector.querySelectorAll('.level-btn');
+const hskTooltip = document.getElementById('hskTooltip');
 
 function setSpeakLang(lang) {
   speakLang = lang;
@@ -1158,10 +1241,110 @@ levelBtns.forEach((btn) => {
   btn.addEventListener('click', () => setLevel(btn.dataset.level));
 });
 
-// ฉีด instruction ตามระดับเข้าไปต่อท้าย SYSTEM_PROMPT หลัก (frame persona เท่านั้น ไม่ส่ง word list เต็ม)
+// จีด instruction ตามระดับเข้าไปต่อท้าย SYSTEM_PROMPT หลัก (frame persona เท่านั้น ไม่ส่ง word list เต็ม)
 function buildSystemPrompt() {
   return SYSTEM_PROMPT + '\n\n' + LEVEL_PROMPTS[currentLevel];
 }
+
+// ===== HSK WORD SEGMENTATION + HIGHLIGHT — Phase 1C Step 2 =====
+// threshold ของแต่ละระดับ: highlight คำที่ "เกิน" ระดับนี้ไป (null = ไม่ highlight เลย เพราะเป็นระดับสูงสุดแล้ว)
+const LEVEL_THRESHOLD = { easy: 2, normal: 4, hard: null };
+
+// greedy longest-match segmentation: ที่ตำแหน่ง i ลองจับคำยาวสุดก่อน (ไม่เกิน hskMaxLen) แล้วค่อยลดความยาวลงเรื่อยๆ
+// คืนค่าเป็น array ของ { text, info } โดย info = ข้อมูลจาก hskDict หรือ null ถ้าไม่เจอในดิกชันนารี (เช่น ชื่อเฉพาะ/อักษรที่ไม่อยู่ใน HSK)
+function segmentChinese(text) {
+  const tokens = [];
+  let i = 0;
+  while (i < text.length) {
+    let matched = null;
+    let matchedLen = 0;
+    const maxTry = Math.min(hskMaxLen, text.length - i);
+    for (let len = maxTry; len >= 1; len--) {
+      const sub = text.substr(i, len);
+      if (hskDict.has(sub)) {
+        matched = hskDict.get(sub);
+        matchedLen = len;
+        break;
+      }
+    }
+    if (matched) {
+      tokens.push({ text: text.substr(i, matchedLen), info: matched });
+      i += matchedLen;
+    } else {
+      // ตัวอักษรเดี่ยวที่ไม่อยู่ใน dict เลย (เช่น เครื่องหมายวรรคตอน, ชื่อเฉพาะ) — ปล่อยผ่านไม่ highlight
+      tokens.push({ text: text[i], info: null });
+      i += 1;
+    }
+  }
+  return tokens;
+}
+
+// สร้าง HTML ของบรรทัดจีน พร้อม <span class="hsk-hl"> ครอบคำที่เกินระดับที่เลือกไว้
+function buildHighlightedChineseHTML(chineseText) {
+  if (!hskDataReady || !chineseText) return escapeHTML(chineseText);
+  const threshold = LEVEL_THRESHOLD[currentLevel];
+  if (threshold === null) return escapeHTML(chineseText); // โหมดยาก = ไม่ highlight อะไรเลย
+
+  const tokens = segmentChinese(chineseText);
+  return tokens.map((tok) => {
+    const safe = escapeHTML(tok.text);
+    if (tok.info && tok.info.level > threshold) {
+      const py = escapeAttr(tok.info.pinyin || '');
+      const en = escapeAttr(tok.info.meaning_en || '');
+      const th = escapeAttr(tok.info.meaning_th || '');
+      // เก็บข้อมูลไว้ใน data-* attribute เพื่อให้ tooltip ดึงไปโชว์ได้ตอนกด
+      return `<span class="hsk-hl" data-py="${py}" data-en="${en}" data-th="${th}">${safe}</span>`;
+    }
+    return safe;
+  }).join('');
+}
+
+// ===== HSK TOOLTIP (กดคำที่ highlight ไว้ → โชว์ pinyin + ความหมาย EN/TH) =====
+function showHskTooltip(target) {
+  const hanzi = target.textContent;
+  const py = target.dataset.py;
+  const en = target.dataset.en;
+  const th = target.dataset.th;
+
+  hskTooltip.innerHTML =
+    `<div class="tt-hanzi">${escapeHTML(hanzi)}</div>` +
+    `<div class="tt-py">${escapeHTML(py)}</div>` +
+    `<div class="tt-en">${escapeHTML(en)}</div>` +
+    (th ? `<div class="tt-th">${escapeHTML(th)}</div>` : '');
+
+  const rect = target.getBoundingClientRect();
+  hskTooltip.classList.add('show');
+  // วัดขนาด tooltip หลัง render แล้วค่อยจัดตำแหน่งให้พอดีจอ (กันล้นขวา/ล้นบน)
+  const ttRect = hskTooltip.getBoundingClientRect();
+  let left = rect.left + rect.width / 2 - ttRect.width / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - ttRect.width - 8));
+  let top = rect.top - ttRect.height - 8;
+  if (top < 8) top = rect.bottom + 8; // ถ้าล้นขอบบนจอ ให้โชว์ใต้คำแทน
+  hskTooltip.style.left = left + 'px';
+  hskTooltip.style.top = top + 'px';
+}
+
+function hideHskTooltip() {
+  hskTooltip.classList.remove('show');
+}
+
+// event delegation: ฟังการกดทั้งหน้าจอ chat แทนการผูก listener ทีละ span (รองรับ span ที่เพิ่มเข้ามาทีหลังด้วย)
+chat.addEventListener('click', (e) => {
+  const hl = e.target.closest('.hsk-hl');
+  if (hl) {
+    e.stopPropagation();
+    showHskTooltip(hl);
+  } else {
+    hideHskTooltip();
+  }
+});
+
+// กดที่อื่นนอก chat (เช่น พื้นหลัง) ก็ปิด tooltip ด้วย
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.hsk-hl') && !e.target.closest('#hskTooltip')) {
+    hideHskTooltip();
+  }
+});
 
 voiceSelect.addEventListener('change', () => {
   selectedVoiceURI = voiceSelect.value;
@@ -1356,6 +1539,11 @@ function escapeHTML(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ใช้เฉพาะตอนใส่ค่าลงใน HTML attribute (เช่น data-en="...") — ต้อง escape " และ ' เพิ่มจาก escapeHTML ปกติด้วย กันแอตทริบิวต์พัง
+function escapeAttr(str) {
+  return escapeHTML(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // แปลง pinyin text ดิบ → HTML string ที่ครอบแต่ละพยางค์ด้วย <span class="tone-N"> ตาม tone
 function colorizePinyinHTML(pinyinText) {
   if (!pinyinText) return '';
@@ -1390,7 +1578,7 @@ function addMessage(role, text) {
 
     const cnLine = document.createElement('div');
     cnLine.className = 'cn-line';
-    cnLine.textContent = parsed.chinese;
+    cnLine.innerHTML = buildHighlightedChineseHTML(parsed.chinese);
     bubble.appendChild(cnLine);
 
     if (parsed.pinyin) {
@@ -1595,6 +1783,7 @@ function hideSetupScreen() {
 
 function initApp() {
   setLevel(currentLevel); // sync ปุ่มระดับความยากให้ตรงกับค่าที่เคยเลือก/default ('normal')
+  loadHskData(); // โหลด hsk-data.json แบบ async (ไม่บล็อก UI) — ใช้สำหรับ highlight ใน Step 2
   const key = getApiKey();
   if (key) {
     hideSetupScreen();
@@ -1646,7 +1835,7 @@ window.speechSynthesis.onvoiceschanged = () => populateVoiceList();
 populateVoiceList(); // เผื่อบางเบราว์เซอร์โหลด voices เสร็จไปแล้วก่อน listener ติด
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Phase1C-Step1 (HSK level selector: ง่าย/ปานกลาง/ยาก → persona framing)</div>
+<div id="buildTag">CTalk v1 · Phase1C-Step2 (HSK level selector + word highlight/tooltip, hsk-data.json)</div>
 
 </body>
 </html>
