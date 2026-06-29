@@ -321,7 +321,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 10px;
   }
 
   /* Mic button */
@@ -1296,7 +1296,6 @@
   </div>
   <button type="button" class="settings-btn" id="translateToggle" title="กดเพื่อโชว์/ซ่อนคำแปลไทย">🌐</button>
   <button type="button" class="settings-btn" id="clearBtn" title="ล้างประวัติการสนทนา">🗑️</button>
-  <button type="button" class="settings-btn" id="practiceBtn" title="ฝึกออกเสียง">🎯</button>
   <button type="button" class="settings-btn" id="settingsBtn" title="ตั้งค่า">⚙️</button>
 </header>
 
@@ -1468,6 +1467,7 @@
     <button id="micBtn" title="กดพูด">🎤</button>
     <button class="side-btn" id="stopBtn" title="หยุดพูด">⏹️</button>
     <button class="side-btn" id="repeatBtn" title="ฟังคำตอบล่าสุดอีกครั้ง">🔁</button>
+    <button class="side-btn" id="practiceBtn" title="ฝึกออกเสียง">🎯</button>
   </div>
   <div class="hint">กดปุ่ม 🌐 หรือพูดว่า "แปล" เพื่อโชว์คำอธิบายภาษาไทย · กดปุ่ม 🗣️ เพื่อสลับภาษาที่จะพูด</div>
 </div>
@@ -1919,6 +1919,7 @@ scenarioApplyBtn.addEventListener('click', () => {
 let practiceTargetData = null;       // { hanzi, pinyin }
 let practiceRecognition = null;      // SpeechRecognition instance แยกจากของหน้าแชทหลัก กันชนกัน
 let isPracticeListening = false;
+let practiceTranscriptBuffer = '';   // สะสมคำพูดที่ final แล้ว รอจนกว่าจะกดหยุดถึงประมวลผล (เหมือน pattern หน้าแชทหลัก)
 
 function openPracticeOverlay() {
   practiceOverlay.classList.add('open');
@@ -2041,29 +2042,43 @@ function setupPracticeRecognition() {
   if (!SpeechRecognition) return false;
 
   practiceRecognition = new SpeechRecognition();
-  practiceRecognition.continuous = false; // ฝึกออกเสียงทีละคำ/ประโยค ไม่ต้องฟังต่อเนื่องแบบหน้าแชทหลัก
-  practiceRecognition.interimResults = false;
-  practiceRecognition.lang = 'zh-CN'; // ฝึกออกเสียงจีนเสมอ ไม่ต้องสลับภาษา
+  practiceRecognition.continuous = true; // ให้ผู้ใช้กดหยุดเองได้ตามจังหวะที่ต้องการ เหมือน pattern หน้าแชทหลัก ไม่ต้องพึ่ง auto-detect ความเงียบ
+  practiceRecognition.interimResults = true; // โชว์คำที่กำลังพูดแบบ real-time ให้เห็นชัดว่าไมค์รับเสียงอยู่จริง
+  practiceRecognition.lang = 'zh-CN'; // ฝึกออกเสียงจีนเสมอ ไม่ต้องสลับภาษาแบบหน้าแชทหลัก
 
   practiceRecognition.onstart = () => {
     isPracticeListening = true;
+    practiceTranscriptBuffer = '';
     practiceMicBtn.classList.add('listening');
     practiceMicStatus.textContent = '🎤 กำลังฟัง...';
   };
 
   practiceRecognition.onresult = (e) => {
-    const heard = e.results[0][0].transcript;
-    showPracticeResult(heard);
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) practiceTranscriptBuffer += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    practiceMicStatus.textContent = '🎤 ' + (practiceTranscriptBuffer + interim);
   };
 
   practiceRecognition.onerror = (e) => {
     console.error('Practice STT error:', e.error);
-    practiceMicStatus.textContent = e.error === 'no-speech' ? 'ไม่ได้ยินเสียง ลองใหม่นะคะ' : `Error: ${e.error}`;
+    if (e.error === 'no-speech') {
+      practiceMicStatus.textContent = 'ไม่ได้ยินเสียง — ลองใหม่นะคะ';
+    } else {
+      practiceMicStatus.textContent = `Error: ${e.error}`;
+    }
   };
 
   practiceRecognition.onend = () => {
     isPracticeListening = false;
     practiceMicBtn.classList.remove('listening');
+    if (practiceTranscriptBuffer.trim()) {
+      showPracticeResult(practiceTranscriptBuffer.trim());
+    } else if (!practiceMicStatus.textContent.startsWith('Error') && !practiceMicStatus.textContent.includes('ไม่ได้ยินเสียง')) {
+      practiceMicStatus.textContent = 'ไม่ได้ยินเสียง — ลองใหม่นะคะ';
+    }
   };
 
   return true;
@@ -2078,14 +2093,18 @@ function showPracticeResult(heardText) {
   practiceResultBox.style.display = 'block';
 }
 
+// กดไมค์ครั้งแรก = เริ่มฟัง / กดอีกครั้งตอนกำลังฟังอยู่ = หยุด+ประมวลผล (toggle เหมือนปุ่ม micBtn หน้าแชทหลัก)
 practiceMicBtn.addEventListener('click', () => {
   if (!practiceRecognition && !setupPracticeRecognition()) {
     practiceMicStatus.textContent = '❌ เบราว์เซอร์ไม่รองรับ STT — ใช้ Chrome นะคะ';
     return;
   }
-  if (isPracticeListening) return;
-  stopSpeaking();
-  try { practiceRecognition.start(); } catch (e) { console.error(e); }
+  if (isPracticeListening) {
+    practiceRecognition.stop();
+  } else {
+    stopSpeaking();
+    try { practiceRecognition.start(); } catch (e) { console.error(e); }
+  }
 });
 
 practiceRetryBtn.addEventListener('click', () => {
@@ -2728,7 +2747,7 @@ window.speechSynthesis.onvoiceschanged = () => populateVoiceList();
 populateVoiceList(); // เผื่อบางเบราว์เซอร์โหลด voices เสร็จไปแล้วก่อน listener ติด
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Phase1D (pronunciation practice overlay, no scoring) + scenario-format fix + tooltip speak btn</div>
+<div id="buildTag">CTalk v1 · Phase1D-fix (practice mic toggle fix, practice btn moved to controls row)</div>
 
 </body>
 </html>
