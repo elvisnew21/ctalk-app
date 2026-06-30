@@ -1048,18 +1048,23 @@
   }
 
   #practiceGoBtn {
-    padding: 0 20px;
-    background: var(--red);
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background: #2e9b5f;
     color: white;
     border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 600;
-    font-family: 'Sarabun', sans-serif;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: 700;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 3px 10px rgba(46,155,95,0.35);
   }
 
-  #practiceGoBtn:active { background: var(--red-dark); }
+  #practiceGoBtn:active { background: #267c4e; }
 
   .practice-candidates {
     display: flex;
@@ -1092,12 +1097,13 @@
     margin-top: 2px;
   }
 
+  /* กล่องเดียวคงที่ (เป้าหมาย + Chrome ฟังว่า) — ไม่มีการสลับ/ซ่อนกล่องไปมาตอนพูดซ้ำ มีแค่ข้อความข้างในที่เปลี่ยน */
   .practice-box {
     background: var(--paper);
     border: 1px solid rgba(139,115,85,0.15);
     border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 10px;
+    padding: 18px 16px;
+    margin-bottom: 4px;
     text-align: center;
   }
 
@@ -1119,42 +1125,59 @@
 
   .practice-pinyin {
     font-size: 14px;
-    color: var(--gray);
+    color: #4a9d6e;
     font-style: italic;
     margin-top: 4px;
+    min-height: 18px;
   }
 
-  #practiceSpeakBtn {
-    margin-top: 10px;
-    background: none;
-    border: 1.5px solid rgba(192,57,43,0.3);
-    color: var(--red);
-    font-size: 13px;
-    padding: 8px 16px;
+  .practice-compare-row {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px dashed rgba(139,115,85,0.25);
+  }
+
+  .practice-compare-row:last-of-type {
+    border-bottom: none;
+    margin-bottom: 4px;
+    padding-bottom: 0;
+  }
+
+  /* แถวปุ่ม action 3 ตัวในกล่องเดียวกัน: ฟังตัวอย่าง | ไมค์ | ลองอีกครั้ง */
+  .practice-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  #practiceSpeakBtn,
+  #practiceRetryBtn {
+    background: var(--white);
+    border: 1.5px solid rgba(139,115,85,0.25);
+    color: var(--ink);
+    font-size: 12px;
+    padding: 9px 12px;
     border-radius: 20px;
     cursor: pointer;
     font-family: 'Sarabun', sans-serif;
+    white-space: nowrap;
   }
 
-  #practiceSpeakBtn:active { background: rgba(192,57,43,0.08); }
-
-  .practice-mic-row {
-    margin-top: 18px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
+  #practiceSpeakBtn:active,
+  #practiceRetryBtn:active { background: var(--paper-dark); }
 
   #practiceMicBtn {
-    width: 56px;
-    height: 56px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     border: none;
     background: var(--red);
     color: white;
-    font-size: 22px;
+    font-size: 24px;
     cursor: pointer;
+    flex-shrink: 0;
     box-shadow: 0 4px 14px rgba(192,57,43,0.35);
   }
 
@@ -1166,42 +1189,8 @@
   #practiceMicStatus {
     font-size: 12px;
     color: var(--gray);
-  }
-
-  .practice-compare-row {
-    margin-bottom: 14px;
-    padding-bottom: 14px;
-    border-bottom: 1px dashed rgba(139,115,85,0.2);
-  }
-
-  .practice-compare-row:last-of-type {
-    border-bottom: none;
-    margin-bottom: 4px;
-    padding-bottom: 0;
-  }
-
-  .practice-result-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-
-  .practice-result-actions button {
-    flex: 1;
-    padding: 10px;
-    border-radius: 10px;
-    font-size: 13px;
-    font-family: 'Sarabun', sans-serif;
-    cursor: pointer;
-    border: 1.5px solid rgba(139,115,85,0.25);
-    background: var(--white);
-    color: var(--ink);
-  }
-
-  #practiceRetryBtn {
-    background: var(--red) !important;
-    color: white !important;
-    border: none !important;
+    text-align: center;
+    margin-top: 10px;
   }
 
   /* ===== TOAST (แจ้งเตือนสั้นๆ เช่นตอนคำศัพท์ mastered) ===== */
@@ -1409,39 +1398,30 @@
 
     <div class="practice-input-row">
       <input type="text" id="practiceInput" placeholder="เช่น สวัสดี หรือ 你好">
-      <button type="button" id="practiceGoBtn">ไป</button>
+      <button type="button" id="practiceGoBtn" title="ไป">➜</button>
     </div>
 
     <div id="practiceCandidates" class="practice-candidates"></div>
     <div id="practiceLoading" class="practice-hint" style="display:none;">正在思考… กำลังหาคำแปลให้ค่ะ</div>
 
-    <div id="practiceTargetBox" class="practice-box" style="display:none;">
-      <div class="practice-box-label">เป้าหมาย</div>
-      <div class="practice-hanzi" id="practiceTargetHanzi"></div>
-      <div class="practice-pinyin" id="practiceTargetPinyin"></div>
-      <button type="button" id="practiceSpeakBtn">🔊 ฟังตัวอย่างเสียง</button>
-
-      <div class="practice-mic-row">
-        <button type="button" id="practiceMicBtn" title="กดเพื่อพูด">🎤</button>
-        <div id="practiceMicStatus">กดไมค์แล้วลองพูดคำนี้ดูค่ะ</div>
-      </div>
-    </div>
-
-    <div id="practiceResultBox" class="practice-box" style="display:none;">
+    <!-- กล่องเดียวคงที่ — สลับแค่ข้อความ "Chrome ฟังว่า" เท่านั้น ไม่มีการสลับหน้า/layout เด้งไปมา -->
+    <div id="practiceBox" class="practice-box" style="display:none;">
       <div class="practice-compare-row">
         <div class="practice-box-label">เป้าหมาย</div>
-        <div class="practice-hanzi" id="practiceResultTargetHanzi"></div>
-        <div class="practice-pinyin" id="practiceResultTargetPinyin"></div>
+        <div class="practice-hanzi" id="practiceTargetHanzi"></div>
+        <div class="practice-pinyin" id="practiceTargetPinyin"></div>
       </div>
       <div class="practice-compare-row">
-        <div class="practice-box-label">Chrome ฟังว่า</div>
-        <div class="practice-hanzi" id="practiceResultHeardHanzi"></div>
-        <div class="practice-pinyin" id="practiceResultHeardPinyin"></div>
+        <div class="practice-box-label">CHROME ฟังว่า</div>
+        <div class="practice-hanzi" id="practiceHeardHanzi">–</div>
+        <div class="practice-pinyin" id="practiceHeardPinyin"></div>
       </div>
-      <div class="practice-result-actions">
-        <button type="button" id="practiceRetryBtn">🔁 ลองอีกครั้ง</button>
-        <button type="button" id="practiceNewBtn">✏️ พิมพ์คำใหม่</button>
+      <div class="practice-actions-row">
+        <button type="button" id="practiceSpeakBtn" title="ฟังตัวอย่างเสียง">🔊 ฟังตัวอย่างเสียง</button>
+        <button type="button" id="practiceMicBtn" title="กดเพื่อพูด">🎤</button>
+        <button type="button" id="practiceRetryBtn" title="ลองอีกครั้ง">🔁 ลองอีกครั้ง</button>
       </div>
+      <div id="practiceMicStatus">กดไมค์แล้วลองพูดคำนี้ดูค่ะ</div>
     </div>
   </div>
 </div>
@@ -1703,19 +1683,15 @@ const practiceInput = document.getElementById('practiceInput');
 const practiceGoBtn = document.getElementById('practiceGoBtn');
 const practiceCandidates = document.getElementById('practiceCandidates');
 const practiceLoading = document.getElementById('practiceLoading');
-const practiceTargetBox = document.getElementById('practiceTargetBox');
+const practiceBox = document.getElementById('practiceBox');
 const practiceTargetHanzi = document.getElementById('practiceTargetHanzi');
 const practiceTargetPinyin = document.getElementById('practiceTargetPinyin');
+const practiceHeardHanzi = document.getElementById('practiceHeardHanzi');
+const practiceHeardPinyin = document.getElementById('practiceHeardPinyin');
 const practiceSpeakBtn = document.getElementById('practiceSpeakBtn');
 const practiceMicBtn = document.getElementById('practiceMicBtn');
 const practiceMicStatus = document.getElementById('practiceMicStatus');
-const practiceResultBox = document.getElementById('practiceResultBox');
-const practiceResultTargetHanzi = document.getElementById('practiceResultTargetHanzi');
-const practiceResultTargetPinyin = document.getElementById('practiceResultTargetPinyin');
-const practiceResultHeardHanzi = document.getElementById('practiceResultHeardHanzi');
-const practiceResultHeardPinyin = document.getElementById('practiceResultHeardPinyin');
 const practiceRetryBtn = document.getElementById('practiceRetryBtn');
-const practiceNewBtn = document.getElementById('practiceNewBtn');
 
 function setSpeakLang(lang) {
   speakLang = lang;
@@ -1977,21 +1953,29 @@ async function getChineseCandidates(thaiText) {
   }
 }
 
+const PRACTICE_NEW_WORD_PLACEHOLDER = 'พิมพ์คำใหม่';
+
+// ซ่อนกล่องทั้งหมดกลับสู่สถานะเริ่มต้น (ใช้ตอนเปิด overlay ครั้งแรก หรือกรอกคำใหม่แล้วผลแปลไม่สำเร็จ)
 function resetPracticeBoxes() {
   practiceCandidates.innerHTML = '';
   practiceLoading.style.display = 'none';
-  practiceTargetBox.style.display = 'none';
-  practiceResultBox.style.display = 'none';
-  practiceMicStatus.textContent = 'กดไมค์แล้วลองพูดคำนี้ดูค่ะ';
+  practiceBox.style.display = 'none';
 }
 
+// ตั้งเป้าหมายใหม่ในกล่องเดียวกัน (ไม่สลับ/ซ่อนกล่อง) + ล้างช่องพิมพ์ + เปลี่ยน placeholder เป็น "พิมพ์คำใหม่"
 function setPracticeTarget(target) {
   practiceTargetData = target;
   practiceCandidates.innerHTML = '';
+  practiceLoading.style.display = 'none';
   practiceTargetHanzi.textContent = target.hanzi;
   practiceTargetPinyin.innerHTML = colorizePinyinHTML(target.pinyin);
-  practiceTargetBox.style.display = 'block';
-  practiceResultBox.style.display = 'none';
+  practiceHeardHanzi.textContent = '–'; // รีเซ็ตผล Chrome ฟังว่า กลับเป็นค่าว่างทุกครั้งที่เปลี่ยนเป้าหมายใหม่
+  practiceHeardPinyin.innerHTML = '';
+  practiceMicStatus.textContent = 'กดไมค์แล้วลองพูดคำนี้ดูค่ะ';
+  practiceBox.style.display = 'block';
+
+  practiceInput.value = '';
+  practiceInput.placeholder = PRACTICE_NEW_WORD_PLACEHOLDER;
 }
 
 function renderCandidates(candidates) {
@@ -2009,7 +1993,7 @@ function renderCandidates(candidates) {
 practiceGoBtn.addEventListener('click', async () => {
   const text = practiceInput.value.trim();
   if (!text) return;
-  resetPracticeBoxes();
+  practiceCandidates.innerHTML = '';
 
   if (detectInputLang(text) === 'th') {
     practiceLoading.textContent = '正在思考… กำลังหาคำแปลให้ค่ะ';
@@ -2075,7 +2059,7 @@ function setupPracticeRecognition() {
     isPracticeListening = false;
     practiceMicBtn.classList.remove('listening');
     if (practiceTranscriptBuffer.trim()) {
-      showPracticeResult(practiceTranscriptBuffer.trim());
+      updatePracticeHeard(practiceTranscriptBuffer.trim());
     } else if (!practiceMicStatus.textContent.startsWith('Error') && !practiceMicStatus.textContent.includes('ไม่ได้ยินเสียง')) {
       practiceMicStatus.textContent = 'ไม่ได้ยินเสียง — ลองใหม่นะคะ';
     }
@@ -2084,13 +2068,11 @@ function setupPracticeRecognition() {
   return true;
 }
 
-function showPracticeResult(heardText) {
-  practiceResultTargetHanzi.textContent = practiceTargetData.hanzi;
-  practiceResultTargetPinyin.innerHTML = colorizePinyinHTML(practiceTargetData.pinyin);
-  practiceResultHeardHanzi.textContent = heardText;
-  practiceResultHeardPinyin.innerHTML = colorizePinyinHTML(getPinyin(heardText));
-  practiceTargetBox.style.display = 'none';
-  practiceResultBox.style.display = 'block';
+// อัปเดตแค่ส่วน "Chrome ฟังว่า" ในกล่องเดิม — ไม่มีการสลับ/ซ่อนกล่องไปมา (แก้ปัญหา layout เด้งตอนพูดซ้ำ)
+function updatePracticeHeard(heardText) {
+  practiceHeardHanzi.textContent = heardText;
+  practiceHeardPinyin.innerHTML = colorizePinyinHTML(getPinyin(heardText));
+  practiceMicStatus.textContent = 'กดไมค์แล้วลองพูดคำนี้อีกครั้งได้เลยค่ะ';
 }
 
 // กดไมค์ครั้งแรก = เริ่มฟัง / กดอีกครั้งตอนกำลังฟังอยู่ = หยุด+ประมวลผล (toggle เหมือนปุ่ม micBtn หน้าแชทหลัก)
@@ -2107,17 +2089,17 @@ practiceMicBtn.addEventListener('click', () => {
   }
 });
 
+// ลองอีกครั้ง: ล้างผลเก่า แล้วเริ่มฟังให้เลยอัตโนมัติ (กดทีเดียวจบ ไม่ต้องกดไมค์ซ้ำ)
 practiceRetryBtn.addEventListener('click', () => {
-  practiceResultBox.style.display = 'none';
-  practiceTargetBox.style.display = 'block';
-  practiceMicStatus.textContent = 'กดไมค์แล้วลองพูดคำนี้อีกครั้งดูค่ะ';
-});
-
-practiceNewBtn.addEventListener('click', () => {
-  practiceInput.value = '';
-  practiceTargetData = null;
-  resetPracticeBoxes();
-  practiceInput.focus();
+  practiceHeardHanzi.textContent = '–';
+  practiceHeardPinyin.innerHTML = '';
+  if (isPracticeListening && practiceRecognition) practiceRecognition.stop();
+  if (!practiceRecognition && !setupPracticeRecognition()) {
+    practiceMicStatus.textContent = '❌ เบราว์เซอร์ไม่รองรับ STT — ใช้ Chrome นะคะ';
+    return;
+  }
+  stopSpeaking();
+  try { practiceRecognition.start(); } catch (e) { console.error(e); }
 });
 
 // จีด instruction ตามระดับเข้าไปต่อท้าย SYSTEM_PROMPT หลัก (frame persona เท่านั้น ไม่ส่ง word list เต็ม)
@@ -2747,7 +2729,7 @@ window.speechSynthesis.onvoiceschanged = () => populateVoiceList();
 populateVoiceList(); // เผื่อบางเบราว์เซอร์โหลด voices เสร็จไปแล้วก่อน listener ติด
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · Phase1D-fix (practice mic toggle fix, practice btn moved to controls row)</div>
+<div id="buildTag">CTalk v1 · Phase1D-redesign (single persistent box, arrow btn, retry auto-listen, input reset)</div>
 
 </body>
 </html>
