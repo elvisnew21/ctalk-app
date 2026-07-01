@@ -95,9 +95,37 @@
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.5px;
-    color: white;
+    color: #002244; /* dark navy — contrast ชัดบน blue sphere */
     pointer-events: none;
     white-space: nowrap;
+  }
+
+  /* ปุ่ม flag — ธงชาติเต็มวงกลม (override yellow sphere) */
+  #speakLangToggle {
+    padding: 0;
+    overflow: hidden;
+    background: none !important;
+    box-shadow:
+      0 4px 12px rgba(0,0,0,0.35),
+      0 1px 3px rgba(0,0,0,0.2),
+      inset 0 1px 3px rgba(255,255,255,0.3) !important;
+  }
+
+  #speakLangToggle:active {
+    transform: scale(0.91);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25) !important;
+  }
+
+  #flagDisplay {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    pointer-events: none;
+  }
+
+  #flagDisplay svg {
+    width: 100%;
+    height: 100%;
   }
 
   /* Structured reply lines */
@@ -317,70 +345,69 @@
   }
 
   /* Mic button */
-  /* ===== ปุ่ม MIC (3D red sphere) ===== */
+  /* ===== ปุ่ม MIC (3D red sphere — center bright, edges dark) ===== */
   #micBtn {
     width: 68px; height: 68px;
     border-radius: 50%;
     border: none;
-    background: radial-gradient(circle at 38% 30%, #ff8a8a, #c0392b, #7a1010);
+    background: radial-gradient(circle at 38% 30%, #FFB5B5 0%, #E53030 45%, #8B0000 100%);
     color: white;
     font-size: 28px;
     cursor: pointer;
     position: relative;
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition: transform 0.15s;
     box-shadow:
-      0 6px 18px rgba(192,57,43,0.55),
-      0 2px 5px rgba(0,0,0,0.3),
-      inset 0 1px 4px rgba(255,255,255,0.3);
+      0 7px 20px rgba(180,0,0,0.5),
+      0 2px 5px rgba(0,0,0,0.25),
+      inset 0 2px 5px rgba(255,200,200,0.4);
     flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
 
   #micBtn:active { transform: scale(0.92); }
 
   #micBtn.listening {
-    background: radial-gradient(circle at 38% 30%, #ff6060, #9b1a1a, #550000);
-    box-shadow: 0 6px 22px rgba(192,57,43,0.7), 0 2px 5px rgba(0,0,0,0.3);
+    background: radial-gradient(circle at 38% 30%, #FF8080 0%, #CC1010 45%, #660000 100%);
     animation: pulse 1.5s infinite;
   }
 
   #micBtn.disabled {
-    background: radial-gradient(circle at 38% 30%, #e0e0e0, #aaa, #777);
+    background: radial-gradient(circle at 38% 30%, #f0f0f0, #c0c0c0, #888);
     box-shadow: 0 3px 8px rgba(0,0,0,0.2);
     cursor: not-allowed;
   }
 
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 6px 18px rgba(192,57,43,0.55), 0 2px 5px rgba(0,0,0,0.3); }
-    50% { box-shadow: 0 6px 32px rgba(192,57,43,0.85), 0 0 0 14px rgba(192,57,43,0.1); }
+    0%, 100% { box-shadow: 0 7px 20px rgba(180,0,0,0.5), 0 2px 5px rgba(0,0,0,0.25); }
+    50% { box-shadow: 0 7px 32px rgba(200,0,0,0.8), 0 0 0 14px rgba(200,0,0,0.1); }
   }
 
-  /* ===== ปุ่มข้าง (3D yellow/gold sphere) ===== */
+  /* ===== ปุ่มข้าง (3D yellow/gold sphere — center near-white, edges gold) ===== */
   .side-btn {
     width: 46px; height: 46px;
     border-radius: 50%;
     border: none;
-    background: radial-gradient(circle at 38% 30%, #fff5a0, #f2c200, #b88000);
-    color: #3a2400;
-    font-size: 20px;
+    /* center สว่างมาก (near-white) → ขอบทองเข้ม = dome effect ที่เห็น icon ชัด */
+    background: radial-gradient(circle at 40% 30%, #FFFCE8 0%, #FFD700 55%, #B8860B 100%);
+    color: #2a1800;
+    font-size: 21px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition: transform 0.15s;
     flex-shrink: 0;
     box-shadow:
-      0 4px 10px rgba(160,110,0,0.45),
+      0 5px 12px rgba(150,100,0,0.4),
       0 1px 3px rgba(0,0,0,0.2),
-      inset 0 1px 3px rgba(255,255,255,0.55);
+      inset 0 2px 4px rgba(255,255,255,0.7);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.15);
   }
 
-  .side-btn:active {
-    transform: scale(0.92);
-    box-shadow: 0 2px 6px rgba(160,110,0,0.35);
-  }
+  .side-btn:active { transform: scale(0.91); }
 
   /* Translate hint */
   .hint {
@@ -549,35 +576,36 @@
   }
 
   /* ===== SETTINGS BUTTON ===== */
-  /* ===== ปุ่ม header (3D blue sphere) ===== */
+  /* ===== ปุ่ม header (3D blue sphere — center near-white, edges blue) ===== */
   .settings-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     border: none;
-    background: radial-gradient(circle at 38% 30%, #e2f0ff, #7ab8e8, #4080c0);
-    color: #0d3060;
+    /* center สว่างมาก → ขอบฟ้า/น้ำเงิน = dome effect ที่เห็น icon ชัด */
+    background: radial-gradient(circle at 40% 30%, #EFF8FF 0%, #90C8F0 55%, #3A7DC0 100%);
+    color: #001f4a;
     font-size: 17px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition: transform 0.15s;
     flex-shrink: 0;
     box-shadow:
-      0 3px 8px rgba(64,128,192,0.45),
+      0 4px 10px rgba(58,125,192,0.4),
       0 1px 2px rgba(0,0,0,0.18),
-      inset 0 1px 3px rgba(255,255,255,0.65);
+      inset 0 2px 4px rgba(255,255,255,0.75);
   }
 
   header #translateToggle { margin-left: auto; }
 
   .settings-btn:active { transform: scale(0.92); }
 
-  /* translateToggle — สีทองเมื่อโชว์คำแปลไทย ON */
+  /* translateToggle — สีทองเมื่อโชว์คำแปลไทย ON (ยังคง light-center style) */
   .settings-btn.active {
-    background: radial-gradient(circle at 38% 30%, #fff5a0, #f2c200, #b88000);
-    box-shadow: 0 3px 8px rgba(160,110,0,0.45), inset 0 1px 3px rgba(255,255,255,0.55);
+    background: radial-gradient(circle at 40% 30%, #FFFCE8 0%, #FFD700 55%, #B8860B 100%);
+    box-shadow: 0 4px 10px rgba(150,100,0,0.4), inset 0 2px 4px rgba(255,255,255,0.65);
   }
 
   /* ===== SIDEBAR ===== */
@@ -1458,7 +1486,7 @@
   <div id="transcript"></div>
   <div class="controls">
     <button class="side-btn" id="clearTranscriptBtn" title="ล้างคำที่พูดไว้ (ยังไม่ส่ง)">🔄</button>
-    <button type="button" class="side-btn" id="speakLangToggle" title="เลือกภาษาที่จะพูด">🇹🇭</button>
+    <button type="button" class="side-btn" id="speakLangToggle" title="เลือกภาษาที่จะพูด"><span id="flagDisplay"></span></button>
     <button id="micBtn" title="กดพูด">🎤</button>
     <button class="side-btn" id="repeatBtn" title="ฟังคำตอบล่าสุดอีกครั้ง">🦻</button>
     <button class="side-btn" id="practiceBtn" title="ฝึกออกเสียง">🗣️</button>
@@ -1656,7 +1684,25 @@ const SCENARIO_STORAGE = 'ctalk_scenario_topic';
 let currentMode = localStorage.getItem(MODE_STORAGE) || 'friend'; // โหมดสนทนา: friend / scenario (default = friend)
 let scenarioTopic = localStorage.getItem(SCENARIO_STORAGE) || ''; // หัวข้อสถานการณ์ปัจจุบัน (ใช้เมื่อ currentMode === 'scenario')
 
-const SPEAK_LANG_LABELS = { 'th-TH': '🇹🇭', 'zh-CN': '🇨🇳' };
+// SVG flag สำหรับ speakLangToggle — ใช้ SVG แทน emoji flag เพราะ emoji flag ไม่ render บน Windows Chrome
+const FLAG_TH = `<svg viewBox="0 0 20 20" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <rect width="20" height="3.34" fill="#A51931"/>
+  <rect y="3.34" width="20" height="3.33" fill="#F4F5F8"/>
+  <rect y="6.67" width="20" height="6.66" fill="#2D2A4A"/>
+  <rect y="13.33" width="20" height="3.33" fill="#F4F5F8"/>
+  <rect y="16.66" width="20" height="3.34" fill="#A51931"/>
+</svg>`;
+
+const FLAG_CN = `<svg viewBox="0 0 20 20" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <rect width="20" height="20" fill="#DE2910"/>
+  <text x="1.8" y="10.5" font-size="8.5" fill="#FFDE00" font-family="sans-serif">★</text>
+  <text x="9.5" y="4.5" font-size="4.5" fill="#FFDE00" font-family="sans-serif">★</text>
+  <text x="12.5" y="7.5" font-size="4.5" fill="#FFDE00" font-family="sans-serif">★</text>
+  <text x="12" y="12" font-size="4.5" fill="#FFDE00" font-family="sans-serif">★</text>
+  <text x="9.5" y="15.5" font-size="4.5" fill="#FFDE00" font-family="sans-serif">★</text>
+</svg>`;
+
+const SPEAK_LANG_FLAGS = { 'th-TH': FLAG_TH, 'zh-CN': FLAG_CN };
 
 const chat = document.getElementById('chat');
 const micBtn = document.getElementById('micBtn');
@@ -1709,7 +1755,8 @@ const practiceRetryBtn = document.getElementById('practiceRetryBtn');
 
 function setSpeakLang(lang) {
   speakLang = lang;
-  speakLangToggle.textContent = SPEAK_LANG_LABELS[lang];
+  const flagEl = document.getElementById('flagDisplay');
+  if (flagEl) flagEl.innerHTML = SPEAK_LANG_FLAGS[lang]; // SVG flag ทำงานบน Windows ต่างจาก emoji flag
   if (recognition) recognition.lang = lang;
 }
 
@@ -2699,6 +2746,7 @@ function initApp() {
   setLevel(currentLevel); // sync ปุ่มระดับความยากให้ตรงกับค่าที่เคยเลือก/default ('normal')
   setMode(currentMode); // sync ปุ่มโหมดสนทนา — mode===currentMode อยู่แล้วตอนนี้ จึงไม่เคลียร์แชท (isRealChange=false)
   updateScenarioLabel(); // โชว์หัวข้อสถานการณ์ที่เคยเลือกไว้ (ถ้ามี)
+  setSpeakLang(speakLang); // render SVG flag ให้ถูกต้องตั้งแต่เปิดแอป (emoji flag ไม่ทำงานบน Windows)
   loadHskData(); // โหลด hsk-data.json แบบ async (ไม่บล็อก UI) — ใช้สำหรับ highlight ใน Step 2
   renderReviewList(); // โชว์ review list ที่เคยเก็บไว้ใน localStorage (Step 3)
   const key = getApiKey();
@@ -2752,7 +2800,7 @@ window.speechSynthesis.onvoiceschanged = () => populateVoiceList();
 populateVoiceList(); // เผื่อบางเบราว์เซอร์โหลด voices เสร็จไปแล้วก่อน listener ติด
 initApp();
 </script>
-<div id="buildTag">CTalk v1 · icon-redesign (3D buttons, flag lang, mic toggle icon, mobile dup fix)</div>
+<div id="buildTag">CTalk v1 · icon-v2 (SVG flags, light-center dome 3D, icon visibility fix)</div>
 
 </body>
 </html>
